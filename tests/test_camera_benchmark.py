@@ -5,6 +5,7 @@ import scripts.benchmark_camera as benchmark_camera
 from scripts.benchmark_camera import (
     GUIDED_PHASES,
     INTERACTIVE_SCENARIOS,
+    _ascii_cue,
     _measurement_summary,
     _new_scenario_stats,
     _percentile,
@@ -39,6 +40,10 @@ def test_camera_benchmark_percentiles(values, percentile, expected) -> None:
 
 def test_camera_benchmark_empty_percentile_is_not_available() -> None:
     assert _percentile([], 95) is None
+
+
+def test_live_runner_cue_is_renderable_with_opencv_ascii_font() -> None:
+    assert _ascii_cue("PHA nhắm mắt · giữ 2 giây") == "PHA nham mat | giu 2 giay"
 
 
 def test_interactive_scenarios_can_be_selected_for_reproduction() -> None:

@@ -7,6 +7,7 @@ import argparse
 import json
 import platform
 import sys
+import unicodedata
 from collections import Counter
 from contextlib import ExitStack
 from datetime import UTC, datetime
@@ -133,6 +134,13 @@ def _percentile(values: list[float], percentile: float) -> float | None:
     if not values:
         return None
     return float(np.percentile(values, percentile))
+
+
+def _ascii_cue(value: str) -> str:
+    """Convert Vietnamese cue text for OpenCV's non-Unicode Hershey font."""
+    normalized = unicodedata.normalize("NFKD", value)
+    normalized = normalized.replace("đ", "d").replace("Đ", "D").replace("·", "|")
+    return normalized.encode("ascii", errors="ignore").decode("ascii")
 
 
 def _new_measurement_stats() -> dict[str, object]:
@@ -423,7 +431,7 @@ def run_interactive_scenario_check(args: argparse.Namespace) -> dict[str, object
                     )
                     cv2.putText(
                         display,
-                        prompt,
+                        _ascii_cue(prompt),
                         (10, 25),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         0.48,
@@ -431,7 +439,7 @@ def run_interactive_scenario_check(args: argparse.Namespace) -> dict[str, object
                         2,
                         cv2.LINE_AA,
                     )
-                    cv2.imshow("VinFast DMS · Kiểm tra tình huống", display)
+                    cv2.imshow("VinFast DMS - Interactive check", display)
                     key = cv2.waitKey(1) & 0xFF
                 except cv2.error as exc:
                     display_status = "UNAVAILABLE"
