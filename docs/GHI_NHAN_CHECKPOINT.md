@@ -208,7 +208,33 @@ từ unit test.
 - Phần chưa kiểm chứng: chưa có clip thật được đồng ý, nhãn độc lập, metric thật,
   FPS trên người thật hoặc so sánh baseline thực nghiệm. Unit fixture chỉ kiểm
   tra code, không được xem là thực nghiệm hay công bố kết quả.
-- Commit/push: SHA sẽ được bổ sung trong biên bản checkpoint kế tiếp; CP7 chưa
-  chuyển trạng thái PASS thực nghiệm. Push và SHA remote cần xác minh sau commit.
+- Commit/push: `191cb68fa9046769dca7cad383657e97b08937b3`; đã push `main`, sau
+  `git fetch origin`, `HEAD` và `origin/main` cùng SHA. CP7 vẫn PENDING REAL DATA,
+  không nhận PASS thực nghiệm.
 - Minh chứng: `tests/test_metrics.py`, `tests/test_benchmark.py`; không tạo hoặc
   xuất bản dữ liệu benchmark giả.
+
+### CP8 — Một ca lỗi và nguyên nhân
+
+- Thời điểm UTC: 2026-10-16 12:17 UTC.
+- Trạng thái: NOT DEMONSTRATED; chưa có clip consent và nhãn độc lập để chứng minh
+  ca lỗi thực.
+- Đã thay đổi: `scripts/reproduce_failure.py` chạy lại clip từ đầu, lưu CSV riêng
+  tư và trích cửa sổ thời gian có EAR/yaw/chất lượng/trạng thái; tùy chọn đối chiếu
+  CSV nhãn độc lập. `docs/PHAN_TICH_CA_LOI.md` ghi rõ bằng chứng hiện có và quy
+  trình tái hiện sau này.
+- Lệnh đã chạy: `.venv/bin/ruff check .` → exit 0;
+  `.venv/bin/python -m compileall -q src scripts tests` → exit 0;
+  `.venv/bin/python -m pytest -q` → 90 passed;
+  `python scripts/reproduce_failure.py --help` → exit 0;
+  `git diff --check` → exit 0.
+- Điều kiện chấp nhận: công cụ không kết luận root cause chỉ từ log; nếu không có
+  nhãn độc lập, thông báo rõ rằng cửa sổ dự đoán không chứng minh failure. Kịch
+  bản occlusion/mất mặt được giữ là stress test; `UNKNOWN` đúng không bị gọi nhầm
+  là lỗi dự đoán.
+- Phần chưa kiểm chứng: không có clip ID, thời điểm sự kiện thật, nhãn mong đợi,
+  dự đoán lỗi, số đo liên quan hoặc root cause đã quan sát; chưa có regression test
+  của lỗi đã sửa.
+- Commit/push: sẽ được ghi ở checkpoint tiếp theo sau khi commit/push CP8.
+- Minh chứng: `docs/PHAN_TICH_CA_LOI.md`, `scripts/reproduce_failure.py`;
+  không ghi hình hoặc tạo failure giả.

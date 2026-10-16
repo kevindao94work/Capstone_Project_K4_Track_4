@@ -42,7 +42,13 @@ def test_benchmark_manifest_requires_schema_and_samples(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    "script", ["scripts/annotate_events.py", "scripts/evaluate.py", "scripts/benchmark.py"]
+    "script",
+    [
+        "scripts/annotate_events.py",
+        "scripts/evaluate.py",
+        "scripts/benchmark.py",
+        "scripts/reproduce_failure.py",
+    ],
 )
 def test_evaluation_tools_help(script: str) -> None:
     result = subprocess.run(
