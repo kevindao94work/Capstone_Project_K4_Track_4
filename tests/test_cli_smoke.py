@@ -22,6 +22,7 @@ def test_camera_check_help_does_not_open_camera() -> None:
     )
     assert result.returncode == 0
     assert "--camera-index" in result.stdout
+    assert "--duration-seconds" in result.stdout
 
 
 def test_demo_cli_help_does_not_require_camera_or_model() -> None:
@@ -34,3 +35,14 @@ def test_demo_cli_help_does_not_require_camera_or_model() -> None:
     assert result.returncode == 0
     assert "--source" in result.stdout
     assert "--headless" in result.stdout
+
+
+def test_headless_camera_requires_a_frame_limit_without_opening_camera() -> None:
+    result = subprocess.run(
+        [sys.executable, "-m", "vinfast_dms", "--source", "camera", "--headless"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 2
+    assert "--max-frames" in result.stderr

@@ -127,6 +127,30 @@ từ unit test.
 - Phần chưa kiểm chứng: ngưỡng diện tích mặt và residual là heuristic; chưa đo
   blur/brightness và không tạo confidence giả; pose chưa hiệu chuẩn theo camera.
   Video 100 khung là clip trống tổng hợp, không đại diện người thật.
-- Commit/push: SHA sẽ được ghi và đối chiếu ở CP5.
+- Commit/push: `20512cec29cae33faf88cc1743758bde25d74c7b`; đã push `main`, sau
+  `git fetch origin`, `HEAD` và `origin/main` cùng SHA.
 - Minh chứng: `tests/test_uncertainty.py`, `tests/test_pipeline.py`,
   `tests/test_temporal.py`, `tests/test_geometry.py`.
+
+### CP5 — Giao diện OpenCV và live demo
+
+- Thời điểm UTC: 2026-10-16 12:08 UTC.
+- Trạng thái: PASS cho UI/fallback video và kiểm thử phím bằng nguồn giả;
+  BLOCKED-QUYỀN cho webcam thật vì chưa nhận được quyền Camera macOS.
+- Đã thay đổi: `scripts/check_camera.py` (kiểm tra theo số frame hoặc thời lượng),
+  `src/vinfast_dms/cli.py` (đóng cửa sổ an toàn khi display lỗi),
+  `tests/test_cli_live.py`, `tests/test_cli_smoke.py`.
+- Lệnh đã chạy: `python -m compileall -q src scripts tests` → 0;
+  `ruff check .` → 0 lỗi; `pytest -q` → 67 passed;
+  `python -m pip check` → sạch; `python -m vinfast_dms --help` và
+  `python scripts/check_camera.py --help` → exit 0. Video fixture đen 640×480,
+  100 khung, chạy headless với model → exit 0, trạng thái cuối `KHÔNG XÁC ĐỊNH`.
+- Điều kiện chấp nhận: phím `q` thoát và lỗi mở cửa sổ chuyển sang headless được
+  kiểm tra bằng nguồn giả; `r` đặt lại session, `h` hiện trợ giúp; CLI có các
+  ngưỡng, lựa chọn mirror, độ trễ/FPS và trạng thái tiếng Việt. Không ghi media.
+- Phần chưa kiểm chứng: chưa chạy cửa sổ tương tác hoặc webcam; chưa đo FPS thật.
+  `python scripts/check_camera.py --duration-seconds 60` sẽ kiểm tra 1 phút sau
+  khi có quyền Camera; script chỉ đọc frame trong bộ nhớ và không ghi hình.
+- Commit/push: SHA sẽ được ghi và đối chiếu ở CP6.
+- Minh chứng: `tests/test_cli_live.py`, `tests/test_cli_smoke.py`,
+  `tests/test_overlay.py`; video fixture được tạo và xóa trong thư mục tạm.

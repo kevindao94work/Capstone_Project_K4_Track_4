@@ -144,7 +144,10 @@ def main(argv: list[str] | None = None) -> int:
     except KeyboardInterrupt:
         print("Đã dừng theo yêu cầu người dùng.")
     finally:
-        cv2.destroyAllWindows()
+        try:
+            cv2.destroyAllWindows()
+        except cv2.error:
+            pass
     print(f"Đã xử lý {count} khung hình; số khung đang cảnh báo: {warnings}.")
     if count == 0:
         print("Không có khung hình nào được xử lý.", file=sys.stderr)
