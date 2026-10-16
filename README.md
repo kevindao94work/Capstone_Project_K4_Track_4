@@ -39,8 +39,18 @@ Thêm `--max-frames 100` để giới hạn lượt chạy. Script kiểm tra ca
 khi tác giả chủ động gọi `python scripts/check_camera.py`; quyền webcam do macOS
 quản lý, cấp trong **System Settings → Privacy & Security → Camera**. Kết quả hiện
 tại mới được kiểm chứng bằng fixture video tổng hợp; chưa có kết quả trên người.
-Video và ảnh không được ghi mặc định. Log CSV chỉ tạo khi bật `--log-csv` và nằm
-trong `outputs/private/`.
+Video và ảnh không được ghi mặc định. Log CSV chỉ tạo khi bật `--log-csv`; bỏ
+đường dẫn để lưu tên tự sinh trong `outputs/private/`, hoặc chỉ định đường dẫn.
+Ghi video overlay chỉ khi chủ động bật `--record-output`; mặc định cũng nằm trong
+`outputs/private/`. Chỉ bật ghi hình khi đã có đồng ý phù hợp. So sánh replay:
+`python scripts/replay.py --source data/private/consented_demo.mp4`.
+
+Ví dụ chạy headless kèm log riêng tư:
+
+```bash
+python -m vinfast_dms --source data/private/consented_demo.mp4 --headless \
+  --log-csv outputs/private/run.csv
+```
 
 ## Kiểm tra kỹ thuật
 

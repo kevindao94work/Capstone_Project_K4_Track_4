@@ -151,6 +151,31 @@ từ unit test.
 - Phần chưa kiểm chứng: chưa chạy cửa sổ tương tác hoặc webcam; chưa đo FPS thật.
   `python scripts/check_camera.py --duration-seconds 60` sẽ kiểm tra 1 phút sau
   khi có quyền Camera; script chỉ đọc frame trong bộ nhớ và không ghi hình.
-- Commit/push: SHA sẽ được ghi và đối chiếu ở CP6.
+- Commit/push: `dc4d9b4c0428f148cfe22743d1125287ddc4e43b`; đã push `main`, sau `git fetch origin`, `HEAD` và `origin/main` cùng SHA.
 - Minh chứng: `tests/test_cli_live.py`, `tests/test_cli_smoke.py`,
   `tests/test_overlay.py`; video fixture được tạo và xóa trong thư mục tạm.
+
+### CP6 — Logger, recorder theo lựa chọn và replay
+
+- Thời điểm UTC: 2026-10-16 12:10 UTC.
+- Trạng thái: PASS cho CSV, replay và codec với fixture tổng hợp; không ghi hoặc
+  công bố media người thật.
+- Đã thay đổi: `src/vinfast_dms/logging_utils.py`, `src/vinfast_dms/cli.py`,
+  `scripts/replay.py`, `tests/test_logging.py`, trợ giúp CLI.
+- Lệnh đã chạy: `python -m compileall -q src scripts tests` → 0;
+  `ruff check .` → 0 lỗi; `pytest -q` → 76 passed;
+  `python -m pip check` → sạch. CLI chạy clip đen 10 khung với
+  `--log-csv` và `--record-output` trong thư mục tạm → exit 0, CSV có 10 dòng,
+  AVI có 10 khung và dữ liệu; `python scripts/replay.py` chạy 2 lượt, 10 khung,
+  chữ ký dự đoán giống nhau ngoài ID/thời gian máy.
+- Điều kiện chấp nhận: CSV schema version 1 có đầy đủ nguồn, thời gian nguồn,
+  thời gian UTC, độ trễ, EAR, yaw/pitch, chất lượng, trạng thái, cảnh báo, hash
+  cấu hình, phiên bản/hash model; giá trị thiếu là ô rỗng. Chỉ ghi khi bật flag;
+  tên tự sinh nằm trong `outputs/private/`. Recorder dùng overlay và báo lỗi
+  codec; fixture AVI roundtrip thành công, output hỏng/empty bị xóa.
+- Phần chưa kiểm chứng: chưa replay clip cá nhân có consent; chưa ghi video người
+  thật. Những tệp fixture đều ở thư mục tạm và đã bị xóa khi kết thúc.
+- Commit/push: SHA sẽ được ghi và đối chiếu ở CP7.
+- Minh chứng: `tests/test_logging.py`, `tests/test_cli_smoke.py`,
+  `scripts/replay.py`; cột runtime bị bỏ qua khi so sánh gồm `run_id`,
+  `wall_time_utc`, `processing_ms`.

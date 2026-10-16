@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from contextlib import ExitStack
 from dataclasses import replace
 from pathlib import Path
 from time import perf_counter
@@ -12,6 +13,14 @@ import cv2
 
 from vinfast_dms.config import Config, load_config
 from vinfast_dms.landmarks import LandmarkerError, MediaPipeLandmarker
+from vinfast_dms.logging_utils import (
+    CsvLogger,
+    RecordingError,
+    VideoRecorder,
+    new_run_id,
+    private_output_path,
+    sha256_file,
+)
 from vinfast_dms.overlay import draw_overlay
 from vinfast_dms.pipeline import DMSPipeline
 from vinfast_dms.sources import SourceError, VideoSource
@@ -40,6 +49,26 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--yaw-threshold", type=float)
     parser.add_argument("--distracted-hold", type=float)
     parser.add_argument("--max-gap", type=float)
+    parser.add_argument(
+        "--log-csv",
+        nargs="?",
+        const="auto",
+        metavar="PATH",
+        help="Bật log CSV; bỏ PATH để lưu tên tự sinh trong outputs/private/.",
+    )
+    parser.add_argument(
+        "--record-output",
+        nargs="?",
+        const="auto",
+        metavar="PATH",
+        help="Ghi video có overlay theo lựa chọn chủ động; mặc định outputs/private/.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("outputs/private"),
+        help="Thư mục kết quả riêng tư mặc định.",
+    )
     mirror = parser.add_mutually_exclusive_group()
     mirror.add_argument("--mirror", dest="mirror", action="store_true")
     mirror.add_argument("--no-mirror", dest="mirror", action="store_false")
@@ -94,53 +123,103 @@ def main(argv: list[str] | None = None) -> int:
     recent_fps: list[float] = []
     last_loop = perf_counter()
     headless = args.headless
+    run_id = new_run_id()
+    log_path: Path | None = None
+    if args.log_csv is not None:
+        log_path = (
+            private_output_path(args.output_dir, run_id, ".csv")
+            if args.log_csv == "auto"
+            else Path(args.log_csv)
+        )
+    recording_path: Path | None = None
+    if args.record_output is not None:
+        recording_path = (
+            private_output_path(args.output_dir, run_id, ".mp4")
+            if args.record_output == "auto"
+            else Path(args.record_output)
+        )
     try:
-        with MediaPipeLandmarker(model_path, max_faces=config.vision.num_faces) as landmarker:
+        with ExitStack() as stack:
+            landmarker = stack.enter_context(
+                MediaPipeLandmarker(model_path, max_faces=config.vision.num_faces)
+            )
+            import mediapipe as mp
+
+            model_sha256 = sha256_file(model_path)
+            source = stack.enter_context(
+                VideoSource(
+                    args.source,
+                    camera_index=args.camera_index,
+                    width=args.width,
+                    height=args.height,
+                    max_frames=args.max_frames,
+                )
+            )
+            logger = None
+            if log_path is not None:
+                logger = stack.enter_context(
+                    CsvLogger(
+                        log_path,
+                        run_id,
+                        config.config_hash,
+                        f"MediaPipe {mp.__version__}",
+                        model_sha256,
+                    )
+                )
             pipeline = DMSPipeline(landmarker, config)
-            with VideoSource(
-                args.source,
-                camera_index=args.camera_index,
-                width=args.width,
-                height=args.height,
-                max_frames=args.max_frames,
-            ) as source:
-                for sample in source:
-                    result = pipeline.process(sample)
-                    count += 1
-                    warnings += int(result.snapshot.warning)
-                    now = perf_counter()
-                    elapsed = now - last_loop
-                    if elapsed > 0.0:
-                        recent_fps.append(1.0 / elapsed)
-                        recent_fps = recent_fps[-30:]
-                    last_loop = now
-                    fps = sum(recent_fps) / len(recent_fps) if recent_fps else 0.0
-                    if not headless:
-                        display = draw_overlay(
-                            sample.frame,
-                            result,
-                            fps,
-                            mirror=config.display.mirror,
+            recorder: VideoRecorder | None = None
+            for sample in source:
+                result = pipeline.process(sample)
+                count += 1
+                warnings += int(result.snapshot.warning)
+                now = perf_counter()
+                elapsed = now - last_loop
+                if elapsed > 0.0:
+                    recent_fps.append(1.0 / elapsed)
+                    recent_fps = recent_fps[-30:]
+                last_loop = now
+                fps = sum(recent_fps) / len(recent_fps) if recent_fps else 0.0
+                if logger is not None:
+                    logger.write(sample, result)
+                display = None
+                if not headless or recording_path is not None:
+                    display = draw_overlay(
+                        sample.frame,
+                        result,
+                        fps,
+                        mirror=config.display.mirror,
+                    )
+                if recording_path is not None:
+                    if recorder is None:
+                        recorder = stack.enter_context(
+                            VideoRecorder(recording_path, source.fps or 30.0)
                         )
-                        try:
-                            cv2.imshow("VinFast DMS · Mẫu thử", display)
-                            key = cv2.waitKey(1) & 0xFF
-                        except cv2.error as exc:
-                            headless = True
-                            print(
-                                f"Không mở được cửa sổ; tiếp tục headless: {exc}",
-                                file=sys.stderr,
-                            )
-                            continue
-                        if key == ord("q"):
-                            break
-                        if key == ord("r"):
-                            pipeline.reset()
-                        if key == ord("h"):
-                            print("Phím: q thoát · r đặt lại · h trợ giúp")
-    except (LandmarkerError, SourceError) as exc:
+                    assert display is not None
+                    recorder.write(display)
+                if not headless:
+                    assert display is not None
+                    try:
+                        cv2.imshow("VinFast DMS · Mẫu thử", display)
+                        key = cv2.waitKey(1) & 0xFF
+                    except cv2.error as exc:
+                        headless = True
+                        print(
+                            f"Không mở được cửa sổ; tiếp tục headless: {exc}",
+                            file=sys.stderr,
+                        )
+                        continue
+                    if key == ord("q"):
+                        break
+                    if key == ord("r"):
+                        pipeline.reset()
+                    if key == ord("h"):
+                        print("Phím: q thoát · r đặt lại · h trợ giúp")
+    except (LandmarkerError, SourceError, OSError) as exc:
         print(f"Không thể chạy demo: {exc}", file=sys.stderr)
         return 2
+    except RecordingError as exc:
+        print(f"Không ghi được video đầu ra: {exc}", file=sys.stderr)
+        return 3
     except KeyboardInterrupt:
         print("Đã dừng theo yêu cầu người dùng.")
     finally:
@@ -153,6 +232,10 @@ def main(argv: list[str] | None = None) -> int:
         print("Không có khung hình nào được xử lý.", file=sys.stderr)
         return 1
     print(f"Trạng thái cuối: {STATE_LABELS_VI[result.state]}.")
+    if log_path is not None:
+        print(f"Log CSV: {log_path}")
+    if recording_path is not None:
+        print(f"Video đầu ra: {recording_path}")
     return 0
 
 

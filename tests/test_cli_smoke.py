@@ -46,3 +46,14 @@ def test_headless_camera_requires_a_frame_limit_without_opening_camera() -> None
     )
     assert result.returncode == 2
     assert "--max-frames" in result.stderr
+
+
+def test_replay_script_help() -> None:
+    result = subprocess.run(
+        [sys.executable, "scripts/replay.py", "--help"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0
+    assert "--source" in result.stdout
