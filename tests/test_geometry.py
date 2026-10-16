@@ -133,11 +133,37 @@ def test_pose_zero_rotation_has_small_reprojection_residual() -> None:
     assert result.yaw_deg == pytest.approx(0.0, abs=1e-4)
 
 
+def test_pose_correspondence_matches_mediapipe_canonical_face_points() -> None:
+    assert POSE_LANDMARK_INDICES == (1, 152, 33, 263, 61, 291)
+    np.testing.assert_allclose(
+        POSE_MODEL_POINTS,
+        [
+            (0.0, -1.126865, 7.475604),
+            (0.0, -9.403378, 4.264492),
+            (-4.445859, 2.663991, 3.173422),
+            (4.445859, 2.663991, 3.173422),
+            (-2.456206, -4.342621, 4.283884),
+            (2.456206, -4.342621, 4.283884),
+        ],
+        atol=1e-6,
+    )
+
+
 @pytest.mark.parametrize("yaw", [-25.0, 25.0])
 def test_pose_yaw_sign_and_magnitude(yaw: float) -> None:
     result = estimate_head_pose(_project_face(yaw_deg=yaw), 640, 480, max_reprojection_error_px=1.0)
     assert result.valid
     assert result.yaw_deg == pytest.approx(yaw, abs=0.1)
+
+
+def test_positive_yaw_points_nose_to_subject_left_in_unmirrored_frame() -> None:
+    frontal = _project_face()
+    turned = _project_face(yaw_deg=25.0)
+    nose_x_frontal = frontal[POSE_LANDMARK_INDICES[0], 0]
+    nose_x_turned = turned[POSE_LANDMARK_INDICES[0], 0]
+    assert nose_x_turned > nose_x_frontal
+    pose = estimate_head_pose(turned, 640, 480, max_reprojection_error_px=1.0)
+    assert pose.yaw_deg is not None and pose.yaw_deg > 0.0
 
 
 @pytest.mark.parametrize("angles", [(0, 20, 0), (0, 0, 18)])

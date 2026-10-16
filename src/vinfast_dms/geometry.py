@@ -14,17 +14,19 @@ from vinfast_dms.landmarks import normalized_to_pixels
 RIGHT_EYE_INDICES = (33, 160, 158, 133, 153, 144)
 LEFT_EYE_INDICES = (362, 385, 387, 263, 373, 380)
 
-# Các mốc mặt phổ biến trên topology Face Mesh; sáu điểm 3D này là mô hình
-# tham chiếu quy mô tùy ý, không đại diện đơn vị mét và không phải hiệu chuẩn.
+# Sáu đỉnh cùng chỉ số trong canonical_face_model.obj của MediaPipe (468 đỉnh).
+# Thứ tự 2D/3D phải tương ứng tuyệt đối. Tọa độ dùng đơn vị canonical cm, không
+# phải kích thước đã hiệu chuẩn của người dùng hoặc camera.
+# Nguồn: https://github.com/google-ai-edge/mediapipe/blob/master/mediapipe/modules/face_geometry/data/canonical_face_model.obj
 POSE_LANDMARK_INDICES = (1, 152, 33, 263, 61, 291)
 POSE_MODEL_POINTS = np.asarray(
     [
-        (0.0, 0.0, 0.0),       # chóp mũi
-        (0.0, -330.0, -65.0),   # cằm
-        (-225.0, 170.0, -135.0),  # khóe mắt ngoài trái theo ảnh
-        (225.0, 170.0, -135.0),   # khóe mắt ngoài phải theo ảnh
-        (-150.0, -150.0, -125.0),  # khóe miệng trái
-        (150.0, -150.0, -125.0),   # khóe miệng phải
+        (0.0, -1.126865, 7.475604),  # 1: chóp mũi
+        (0.0, -9.403378, 4.264492),  # 152: cằm
+        (-4.445859, 2.663991, 3.173422),  # 33: khóe mắt ở trái ảnh
+        (4.445859, 2.663991, 3.173422),  # 263: khóe mắt ở phải ảnh
+        (-2.456206, -4.342621, 4.283884),  # 61: khóe miệng trái ảnh
+        (2.456206, -4.342621, 4.283884),  # 291: khóe miệng phải ảnh
     ],
     dtype=np.float64,
 )
@@ -103,10 +105,14 @@ def default_camera_matrix(width: int, height: int) -> np.ndarray:
 
 
 def rotation_matrix_to_euler(rotation: np.ndarray) -> tuple[float, float, float]:
-    """Euler XYZ theo phân rã Z-Y-X; trả yaw, pitch, roll theo độ.
+    """Phân rã Z-Y-X; trả yaw, pitch, roll theo độ.
 
-    Quy ước: yaw quanh trục Y, pitch quanh X, roll quanh Z; phép quay tổng hợp
-    R = Rz(roll) @ Ry(yaw) @ Rx(pitch). Dấu góc phụ thuộc ảnh không mirror.
+    Quy ước trục object của canonical face: X chạy theo chiều ngang ảnh khi nhìn
+    thẳng, +Y lên trên, và +Z hướng từ mặt ra phía mũi/camera. Euler theo thứ tự
+    R = Rz(roll) @ Ry(yaw) @ Rx(pitch): yaw quanh Y, pitch quanh X, roll quanh Z.
+    Với frame camera không mirror, yaw dương quay mũi về phía trái của chủ thể
+    (phía phải ảnh); yaw âm quay mũi về phía phải của chủ thể. Chỉ mirror overlay,
+    không mirror frame đầu vào PnP.
     """
     r = np.asarray(rotation, dtype=np.float64)
     if r.shape != (3, 3) or not np.isfinite(r).all():
@@ -132,7 +138,13 @@ def estimate_head_pose(
     distortion: np.ndarray | None = None,
     max_reprojection_error_px: float = 12.0,
 ) -> HeadPose:
-    """Ước lượng yaw/pitch/roll; mọi lỗi hoặc residual lớn trả invalid."""
+    """Ước lượng yaw/pitch/roll từ correspondence canonical; lỗi/residual lớn invalid.
+
+    Intrinsics mặc định giả định pixel vuông, tâm quang học ở giữa ảnh, tiêu cự
+    bằng chiều rộng ảnh và không méo. Đây là heuristic; chưa hiệu chuẩn webcam.
+    Reprojection error là căn bậc hai của trung bình bình phương khoảng cách 2D
+    Euclid trên sáu correspondence.
+    """
     points = np.asarray(landmarks, dtype=np.float64)
     if points.ndim != 2 or points.shape[1] < 2:
         return HeadPose(None, None, None, None, False, "invalid_landmark_shape")
