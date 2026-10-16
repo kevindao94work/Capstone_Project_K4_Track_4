@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 import time
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -13,6 +14,9 @@ import numpy as np
 
 class SourceError(RuntimeError):
     """Nguồn hình không thể mở hoặc bị ngắt ngoài dự kiến."""
+
+
+DEFAULT_CAMERA_INDEX = 1
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,7 +40,7 @@ class VideoSource(Iterator[FrameSample]):
     def __init__(
         self,
         source: str = "camera",
-        camera_index: int = 0,
+        camera_index: int = DEFAULT_CAMERA_INDEX,
         width: int = 640,
         height: int = 480,
         max_frames: int | None = None,
@@ -55,21 +59,18 @@ class VideoSource(Iterator[FrameSample]):
         self._last_timestamp_ms = -1
         self._clock_origin_ns: int | None = None
         self.timestamp_fallback = False
+        self.capture_read_attempts = 0
+        self.capture_failures = 0
 
     def __enter__(self) -> VideoSource:
         if self.source == "camera":
-            capture = cv2.VideoCapture(self.camera_index)
-            if not capture.isOpened() and hasattr(cv2, "CAP_AVFOUNDATION"):
-                capture.release()
-                capture = cv2.VideoCapture(self.camera_index, cv2.CAP_AVFOUNDATION)
-            if not capture.isOpened():
-                capture.release()
-                raise SourceError(
-                    "Không mở được webcam. Hãy kiểm tra kết nối và quyền Camera tại "
-                    "System Settings → Privacy & Security → Camera."
-                )
-            capture.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
-            capture.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
+            capture = self._open_camera()
+            try:
+                capture.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
+                capture.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
+            except cv2.error as exc:
+                self._release_capture(capture)
+                raise SourceError(f"Không cấu hình được webcam: {exc}") from exc
             self.capture = capture
         else:
             path = Path(self.source).expanduser()
@@ -84,6 +85,33 @@ class VideoSource(Iterator[FrameSample]):
             self.fps = fps if np.isfinite(fps) and fps > 0.0 else 0.0
         return self
 
+    def _open_camera(self) -> cv2.VideoCapture:
+        backends: list[tuple[int, ...]] = []
+        if sys.platform == "darwin" and hasattr(cv2, "CAP_AVFOUNDATION"):
+            backends.append((self.camera_index, cv2.CAP_AVFOUNDATION))
+        backends.append((self.camera_index,))
+        for arguments in backends:
+            capture: cv2.VideoCapture | None = None
+            try:
+                capture = cv2.VideoCapture(*arguments)
+                if capture.isOpened():
+                    return capture
+            except cv2.error:
+                pass
+            if capture is not None:
+                self._release_capture(capture)
+        raise SourceError(
+            f"Không mở được webcam index {self.camera_index}. Hãy kiểm tra kết nối "
+            "và quyền Camera tại System Settings → Privacy & Security → Camera."
+        )
+
+    @staticmethod
+    def _release_capture(capture: cv2.VideoCapture) -> None:
+        try:
+            capture.release()
+        except cv2.error:
+            pass
+
     def __iter__(self) -> VideoSource:
         return self
 
@@ -92,9 +120,15 @@ class VideoSource(Iterator[FrameSample]):
             raise SourceError("Nguồn chưa được mở; hãy dùng `with VideoSource(...)`.")
         if self.max_frames is not None and self._frame_index >= self.max_frames:
             raise StopIteration
-        ok, frame = self.capture.read()
+        self.capture_read_attempts += 1
+        try:
+            ok, frame = self.capture.read()
+        except cv2.error as exc:
+            self.capture_failures += 1
+            raise SourceError(f"Lỗi khi đọc webcam: {exc}") from exc
         if not ok or frame is None or frame.size == 0:
             if self.source_type == "camera":
+                self.capture_failures += 1
                 raise SourceError("Webcam ngừng gửi khung hình.")
             raise StopIteration
         now_ns = time.monotonic_ns()
@@ -142,7 +176,7 @@ class VideoSource(Iterator[FrameSample]):
 
     def close(self) -> None:
         if self.capture is not None:
-            self.capture.release()
+            self._release_capture(self.capture)
             self.capture = None
 
     def __exit__(self, *_: object) -> None:

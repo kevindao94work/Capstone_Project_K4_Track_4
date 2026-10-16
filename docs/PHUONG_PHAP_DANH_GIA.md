@@ -4,9 +4,10 @@
 
 ## Tình trạng đánh giá
 
-Chưa có video người thật được consent hoặc ground truth thủ công. Vì vậy không có
-accuracy/F1/coverage/FPS webcam thực để báo cáo. Các lệnh dưới đây mô tả phương
-pháp tái lập; chúng không khẳng định đã có dữ liệu hay kết quả.
+Chưa có video được lưu với consent hoặc ground truth thủ công. Đã có benchmark
+hiệu năng webcam trực tiếp và spot-check tương tác không lưu media; vì vậy có thể
+báo cáo capture/FPS/latency và trạng thái quan sát theo pha, nhưng chưa có
+accuracy/F1/coverage hoặc false-alarm rate có nhãn độc lập.
 
 ## Chuẩn bị dữ liệu riêng tư
 
@@ -65,6 +66,29 @@ log và JSON trong `outputs/private/benchmark/`, ghi phần cứng/phần mềm,
 checksum, config hash và metric từng clip. Không đưa artifact có dữ liệu cá nhân
 lên repo công khai.
 
+Đo hiệu năng xử lý trực tiếp từ webcam index 1 mà không lưu frame hoặc đặc trưng:
+
+```bash
+python scripts/benchmark_camera.py --camera-index 1 --duration-seconds 60 \
+  --output outputs/private/camera_benchmark.json
+```
+
+JSON chỉ chứa số frame, tốc độ, latency, tỷ lệ landmark hợp lệ, trạng thái tổng hợp,
+thông số môi trường và hash model/config. Mặc định không ghi JSON; kết quả chỉ in
+ra terminal. Lệnh này không gắn nhãn hành vi và không sinh precision/recall/F1.
+
+Để thực hiện từng cue khi người tham gia sẵn sàng, chạy:
+
+```bash
+python scripts/benchmark_camera.py --camera-index 1 --interactive-scenarios \
+  --output outputs/private/camera_interactive.json
+```
+
+Cửa sổ hiển thị từng hành vi và chờ Space trước khi tính pha; `s` bỏ qua pha giảm
+sáng tùy chọn, `q` dừng. Đây là spot-check có điều khiển theo cue, không có nhãn
+độc lập; không dùng để tính accuracy/F1. Chỉ số pha là số tổng hợp, không giữ
+frame, ảnh, đặc trưng hay timestamp từng frame.
+
 ## Định nghĩa metric
 
 - **Confusion matrix:** frame trong đoạn nhãn được gán trạng thái thật theo thời
@@ -89,6 +113,21 @@ lên repo công khai.
   trên toàn log.
 - **FPS runtime:** tính cùng công thức trên `wall_time_utc` của log; phụ thuộc máy
   và điều kiện chạy. Không lấy FPS fixture làm kết quả benchmark người thật.
+- **Tốc độ nguồn camera:** `(số frame − 1) / (timestamp nguồn cuối − timestamp
+  nguồn đầu)` trong phiên webcam.
+- **Năng lực xử lý riêng pipeline:** số frame xử lý chia tổng
+  `DMSPipeline.process` time; loại thời gian chờ camera và render.
+- **Throughput headless:** số frame chia thời gian chạy wall-clock; gồm chờ
+  capture và xử lý, không gồm render. Đây là throughput trung bình của phiên,
+  không phải median FPS theo cửa sổ. Các số này không phải độ trễ
+  camera-to-display.
+- **Tỷ lệ landmark hợp lệ:** số frame có landmark đạt kiểm tra hình dạng/kích cỡ
+  chia frame đã xử lý. Tỷ lệ pipeline hợp lệ chặt hơn, vì còn yêu cầu EAR và PnP
+  qua quality gate.
+- **Capture failure rate:** số lần `read()` thất bại chia số lần gọi `read()` trong
+  phiên; không đo mất frame nội bộ của driver nếu OpenCV không báo lỗi.
+- **Camera-to-display:** không đo trong benchmark headless. Event-to-warning chỉ đo
+  trên segment có mốc bắt đầu được gắn nhãn độc lập.
 - **Baseline:** instant threshold trên cùng EAR/yaw và guard chất lượng, không
   dùng EMA/dwell temporal. Mọi so sánh lấy cùng clip, frame và ground truth; chỉ
   gọi temporal tốt hơn nếu số liệu thực chứng minh điều đó.

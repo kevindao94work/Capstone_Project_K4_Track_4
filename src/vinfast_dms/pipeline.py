@@ -37,6 +37,7 @@ class PipelineResult:
     quality_reason: str | None
     snapshot: StateSnapshot
     processing_ms: float
+    face_detected: bool = False
 
     @property
     def state(self) -> DMSState:
@@ -62,8 +63,10 @@ class DMSPipeline:
             height, width = 0, 0
         if frame_reason is not None:
             assessment = QualityAssessment(False, frame_reason)
+            face_detected = False
         else:
             detected = self.landmarker.detect_bgr(frame, sample.timestamp_ms)
+            face_detected = detected.face_count > 0
             assessment = assess_landmarks(
                 detected, width, height, self.config.vision.min_face_fraction
             )
@@ -119,4 +122,5 @@ class DMSPipeline:
             quality_reason=reason,
             snapshot=snapshot,
             processing_ms=processing_ms,
+            face_detected=face_detected,
         )

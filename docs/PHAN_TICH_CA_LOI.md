@@ -4,10 +4,37 @@
 
 ## Trạng thái bằng chứng
 
-**NOT DEMONSTRATED.** Hiện chưa có video người thật được đồng ý, nhãn độc lập,
-clip ID, mốc thời gian hay log dự đoán để khẳng định một lỗi quan sát thật. Vì vậy
-tài liệu này không nêu EAR, yaw, trạng thái dự đoán hoặc nguyên nhân gốc của một
-ca lỗi giả định như thể đã đo được.
+**NOT DEMONSTRATED ở mức ca lỗi có root cause đã xác nhận.** CP12 đã có spot-check
+trực tiếp trên người tham gia với cue được bắt đầu thủ công; người tham gia xác
+nhận đã thực hiện từng hành vi sau cue và chờ hết pha. Tuy nhiên, lượt này không có
+nhãn độc lập theo timestamp, không giữ frame/đặc trưng và chưa tái hiện ổn định một
+lỗi. Bằng chứng ứng viên dưới đây được ghi riêng, không trình bày như kết luận
+false positive/negative đã được chứng minh.
+
+## Tín hiệu ứng viên trong spot-check CP12
+
+- **Thiết lập:** camera tích hợp MacBook Pro M4, index 1, AVFoundation, 640×480;
+  MediaPipe Face Landmarker và cấu hình mặc định. Cửa sổ hiển thị overlay/cue;
+  báo cáo chỉ giữ số liệu tổng hợp. Tác giả là người tham gia duy nhất.
+- **Pha nhìn thẳng, mắt mở:** người tham gia xác nhận làm theo cue; 181 frame,
+  trong đó `DISTRACTED` 137, `NORMAL` 34, `UNKNOWN` 10; 171 frame qua quality
+  gate, có 137 frame cảnh báo. Đây là tín hiệu false-alarm ứng viên.
+- **Tái kiểm tra:** chạy lại riêng cùng cue trong 6,03 giây; 181/181 frame qua
+  quality gate và đều `NORMAL`, không có cảnh báo. Lượt đầu không tái hiện; do đó
+  không gọi đây là false alarm xác nhận và không suy đoán nguyên nhân.
+- **Pha quay trái:** người tham gia xác nhận làm theo cue; 211 frame, với
+  `DISTRACTED` 13, `NORMAL` 67 và `UNKNOWN` 131. Có 126 frame mang lý do
+  `high_reprojection_error`, chỉ 80 frame hợp lệ toàn pipeline. Đây là tín hiệu
+  ứng viên về giảm coverage khi quay trái. Báo cáo chỉ tổng hợp toàn pha 7 giây;
+  không có timestamp riêng cho đoạn giữ đầu 2 giây nên chưa chứng minh chính xác
+  một missed event.
+- **Giới hạn nguyên nhân:** quality gate PnP loại nhiều quan sát trong pha quay
+  trái là lý do được log. Chưa xác định vì ngưỡng residual, mapping/model điểm mặt,
+  góc quay thực hay yếu tố khác; không điều chỉnh ngưỡng khi chưa có trace đủ chi
+  tiết.
+
+Các pha khác cũng là spot-check theo cue, không có nhãn độc lập. Pha giảm sáng được
+bỏ qua; không đưa ra kết luận về ánh sáng yếu. Không có video hoặc ảnh được lưu.
 
 Kiểm thử mất mặt và đầu vào bất hợp lệ trong `tests/test_uncertainty.py` là kiểm
 thử hành vi an toàn tổng hợp. Trạng thái `UNKNOWN` đúng khi che mặt/mất track là
@@ -44,4 +71,8 @@ kiểm tra việc `UNKNOWN` có an toàn hay không trước khi xem đó là l�
 Chỉ gọi một tình huống là ca lỗi khi log và nhãn độc lập chứng minh hệ thống đưa ra
 trạng thái sai hoặc bỏ lỡ một sự kiện cần phát hiện.
 
-**Kết luận hiện tại:** chưa có ca lỗi thực để tái hiện; CP8 chưa được chứng minh.
+**Kết luận hiện tại:** có bất thường ứng viên được quan sát trong pha nhìn thẳng,
+nhưng không tái hiện; có tín hiệu quality-gate coverage thấp ở pha quay trái nhưng
+chưa có mốc hành vi/dự đoán tường minh. Ca lỗi thật với ground truth độc lập,
+root cause được xác định và mitigation được kiểm chứng vẫn **NOT DEMONSTRATED**;
+CP8 chưa đạt.

@@ -1,0 +1,101 @@
+import pytest
+import scripts.benchmark_camera as benchmark_camera
+from scripts.benchmark_camera import (
+    GUIDED_PHASES,
+    INTERACTIVE_SCENARIOS,
+    _percentile,
+    build_parser,
+    run_interactive_scenario_check,
+)
+
+from vinfast_dms.sources import SourceError
+
+
+def test_camera_benchmark_defaults_to_builtin_camera() -> None:
+    args = build_parser().parse_args([])
+    assert args.camera_index == 1
+    assert args.duration_seconds == 30.0
+    assert args.output is None
+
+
+def test_camera_benchmark_allows_an_explicit_camera_override() -> None:
+    args = build_parser().parse_args(["--camera-index", "0", "--duration-seconds", "5"])
+    assert args.camera_index == 0
+    assert args.duration_seconds == 5.0
+
+
+@pytest.mark.parametrize(
+    ("values", "percentile", "expected"),
+    [([1.0, 2.0, 3.0, 4.0], 50, 2.5), ([1.0, 2.0, 3.0, 4.0], 95, 3.85)],
+)
+def test_camera_benchmark_percentiles(values, percentile, expected) -> None:
+    assert _percentile(values, percentile) == pytest.approx(expected)
+
+
+def test_camera_benchmark_empty_percentile_is_not_available() -> None:
+    assert _percentile([], 95) is None
+
+
+def test_interactive_scenarios_can_be_selected_for_reproduction() -> None:
+    args = build_parser().parse_args(
+        ["--interactive-scenarios", "--scenario", "normal", "--scenario", "turn_left"]
+    )
+    selected = [
+        scenario[0]
+        for scenario in INTERACTIVE_SCENARIOS
+        if scenario[0] in args.scenario
+    ]
+    assert selected == ["normal", "turn_left"]
+
+
+def test_interactive_camera_open_failure_returns_partial_report(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FakeLandmarker:
+        def __init__(self, *_args, **_kwargs) -> None:
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args) -> None:
+            pass
+
+    class UnavailableCamera:
+        capture_read_attempts = 0
+        capture_failures = 0
+        capture = None
+
+        def __init__(self, *_args, **_kwargs) -> None:
+            pass
+
+        def __enter__(self):
+            raise SourceError("camera unavailable")
+
+        def __exit__(self, *_args) -> None:
+            pass
+
+    monkeypatch.setattr(benchmark_camera, "MediaPipeLandmarker", FakeLandmarker)
+    monkeypatch.setattr(benchmark_camera, "VideoSource", UnavailableCamera)
+    monkeypatch.setattr(benchmark_camera.cv2, "destroyAllWindows", lambda: None)
+    args = build_parser().parse_args(["--interactive-scenarios"])
+    report = run_interactive_scenario_check(args)
+    assert report["measurement_status"] == "PARTIAL"
+    assert report["camera_capture"]["failure"] == "camera unavailable"
+    assert report["scenarios"] == []
+
+
+def test_guided_scenarios_cover_one_minute_and_required_cases() -> None:
+    assert GUIDED_PHASES[0][0] == 0
+    assert GUIDED_PHASES[-1][1] == 60
+    assert {phase[2] for phase in GUIDED_PHASES} == {
+        "normal",
+        "blink",
+        "eyes_closed",
+        "turn_left",
+        "turn_right",
+        "out_of_view",
+        "cover_eyes",
+        "poor_light",
+        "recovery",
+    }

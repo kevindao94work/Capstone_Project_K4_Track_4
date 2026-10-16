@@ -2,11 +2,11 @@
 
 **Người trình bày duy nhất:** Đào Gia Bảo — **MSSV:** 2A202602793.
 
-Kịch bản bám đúng 1 + 4 + 2 + 3 phút. Đã thử lại DMS live sau khi bật quyền Camera,
-nhưng OpenCV vẫn báo `not authorized to capture video`; chưa có frame webcam được
-xử lý. Chưa có video người thật có consent trong repo; phần thao tác dưới đây là kế
-hoạch, không phải tuyên bố đã diễn ra. Không dùng fixture đen làm video demo nhận
-diện.
+Kịch bản bám đúng 1 + 4 + 2 + 3 phút. CP12 đã xác minh webcam index 1 / AVFoundation,
+chạy DMS trên frame thật và hoàn tất spot-check có cue tương tác. Chưa có video
+người thật được lưu với consent hoặc nhãn độc lập; kết quả nhận diện theo pha chỉ
+là quan sát một người, không phải metric accuracy. Không dùng fixture đen làm video
+demo nhận diện.
 
 ## 0:00–1:00 — Bài toán và người dùng
 
@@ -23,12 +23,12 @@ khi lái xe thật. Em sẽ chỉ kết luận điều gì có artifact kiểm c
 Sau khi đã cấp quyền Camera trong cài đặt macOS và tải model:
 
 ```bash
-python -m vinfast_dms --source camera --camera-index 0
+python -m vinfast_dms --source camera --camera-index 1
 ```
 
 Cho xem khung landmark, EAR hai mắt, yaw/pitch, hợp lệ, FPS/độ trễ và trạng thái
-tiếng Việt. Nếu quyền camera chưa được cấp, nói rõ trạng thái và chuyển sang video
-đã được cho phép; không giả làm webcam trực tiếp.
+tiếng Việt. Camera index 1 đã chạy trên máy này; kiểm tra quyền macOS nếu ứng dụng
+demo khác chưa được cấp quyền. Không giả làm webcam trực tiếp bằng video.
 
 ### 1:40–2:20 — Nhìn thẳng và chớp mắt
 
@@ -71,11 +71,12 @@ Nếu không có video đã được phép, dành thời gian này để chỉ c
 - **Trụ cột:** pretrained Face Landmarker; hình học EAR/PnP; uncertainty với
   `UNKNOWN`; thời gian với EMA/dwell; log/replay/evaluation. Nêu test file tương
   ứng và giới hạn PnP chưa hiệu chuẩn.
-- **Số đo:** hiện 92 test kỹ thuật đã pass theo kiểm định CP10; đây không phải metric
-  thực nghiệm. Confusion matrix, event delay, latency, FPS và baseline chỉ được
-  báo khi có video + nhãn thật.
-- **Ca lỗi:** chưa có ca lỗi thực; mất mặt trả UNKNOWN là hành vi fallback đúng,
-  không gọi là failure. Mở `docs/PHAN_TICH_CA_LOI.md` để nêu cách tìm failure thật.
+- **Số đo:** 105 test kỹ thuật pass ở CP12; webcam đã đo 29,94 FPS throughput headless,
+  p50/p95 pipeline latency 8,64/10,90 ms và valid pipeline 80,08% trong một lượt
+  60 giây. Đây là hiệu năng/coverage quan sát, không phải độ chính xác.
+- **Ca lỗi:** pha nhìn thẳng từng tạo 137 frame `DISTRACTED`, nhưng không tái hiện
+  ở lượt lặp; quay trái có nhiều frame `UNKNOWN` và `high_reprojection_error`.
+  Root cause lỗi thực vẫn chưa được xác nhận; xem `docs/PHAN_TICH_CA_LOI.md`.
 - **Impact giả định:** với giả định 1.000 xe, 1 phút/xe/ngày và giảm 10%, phép nhân
   cho ra 100 phút/ngày. Tất cả đầu vào giả định; con số không phải tác động được
   đo hoặc tuyên bố của VinFast.
@@ -91,9 +92,10 @@ tiên câu EAR, PnP, temporal, UNKNOWN, baseline, consent và giới hạn sử 
 
 ## Kiểm tra trước khi lên trình bày
 
-1. Cấp quyền Camera macOS; tự chạy webcam trên đúng máy, rồi thử ánh sáng/che mặt.
+1. Chạy `python scripts/check_camera.py --camera-index 1 --frames 30`; sau đó mở
+   `python -m vinfast_dms --source camera --camera-index 1`.
 2. Nếu có video, xác nhận consent, codec, đường dẫn và lệnh trước buổi demo.
-3. Tải model từ `scripts/download_model.py`; kiểm tra môi trường bằng
+3. Kiểm tra model và môi trường bằng
    `scripts/check_environment.py`.
 4. Đóng ứng dụng nặng, cắm nguồn, tắt thông báo và giữ video/log ở thư mục private.
 5. Nếu live demo lỗi, nói rõ lỗi rồi chuyển sang video đã được phép; không khẳng

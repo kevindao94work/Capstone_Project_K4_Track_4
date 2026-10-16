@@ -86,6 +86,7 @@ def _sample(index: int, t: float) -> FrameSample:
 def test_pipeline_returns_valid_features_for_one_face() -> None:
     pipeline = DMSPipeline(FakeLandmarker([LandmarkResult((_valid_face(),))]), Config())
     result = pipeline.process(_sample(0, 0.0))
+    assert result.face_detected
     assert result.quality_valid
     assert result.eye_metrics is not None and result.eye_metrics.ear_mean == pytest.approx(0.30)
     assert result.head_pose is not None and result.head_pose.valid

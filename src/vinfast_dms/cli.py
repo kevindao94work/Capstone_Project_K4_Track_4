@@ -23,7 +23,7 @@ from vinfast_dms.logging_utils import (
 )
 from vinfast_dms.overlay import draw_overlay
 from vinfast_dms.pipeline import DMSPipeline
-from vinfast_dms.sources import SourceError, VideoSource
+from vinfast_dms.sources import DEFAULT_CAMERA_INDEX, SourceError, VideoSource
 from vinfast_dms.temporal import STATE_LABELS_VI
 
 
@@ -34,7 +34,12 @@ def build_parser() -> argparse.ArgumentParser:
         epilog="Không dùng prototype này khi lái xe thực tế.",
     )
     parser.add_argument("--source", default="camera", help="camera hoặc đường dẫn video.")
-    parser.add_argument("--camera-index", type=int, default=0)
+    parser.add_argument(
+        "--camera-index",
+        type=int,
+        default=DEFAULT_CAMERA_INDEX,
+        help="Chỉ số webcam (mặc định 1: camera tích hợp MacBook Pro M4 đã xác minh).",
+    )
     parser.add_argument("--width", type=int, default=640)
     parser.add_argument("--height", type=int, default=480)
     parser.add_argument(

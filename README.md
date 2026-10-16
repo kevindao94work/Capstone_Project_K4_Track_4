@@ -31,21 +31,38 @@ cục bộ, không theo dõi bằng Git. Kiểm tra môi trường bằng
 Chạy webcam hoặc video:
 
 ```bash
-python -m vinfast_dms --source camera --camera-index 0
+python -m vinfast_dms --source camera
 python -m vinfast_dms --source data/private/consented_demo.mp4 --headless
 ```
 
-Thêm `--max-frames 100` để giới hạn lượt chạy. Script kiểm tra camera chỉ chạy
+Trên MacBook Pro M4 này, mặc định `--camera-index 1` là webcam tích hợp; OpenCV
+dùng backend AVFoundation. Có thể chọn camera khác bằng `--camera-index N`. Thêm
+`--max-frames 100` để giới hạn lượt chạy. CP12 đã đọc 30 frame thật từ index 1,
+chạy DMS trên 120 frame headless và 120 frame có cửa sổ, đồng thời hoàn tất lượt
+kiểm tra tương tác từng tình huống. Camera mở bằng AVFoundation và đã xử lý frame
+thật; kết quả theo tình huống, giới hạn và số đo được ghi tại
+[kết quả thực nghiệm](docs/KET_QUA_THUC_NGHIEM.md). Script kiểm tra nhanh chỉ chạy
 khi tác giả chủ động gọi `python scripts/check_camera.py`; quyền webcam do macOS
-quản lý, cấp trong **System Settings → Privacy & Security → Camera**. CP10 đã thử
-mở DMS live nhưng macOS từ chối. Sau khi tác giả bật Camera permission, lần thử
-lại vẫn nhận `not authorized to capture video`, thoát mã 2 sau 4,3 giây và xử lý
-0 frame. Kết quả trên người vẫn chưa được kiểm chứng.
+quản lý tại **System Settings → Privacy & Security → Camera**.
+
+Đo hiệu năng webcam mà không lưu ảnh, đặc trưng hay video:
+
+```bash
+python scripts/benchmark_camera.py --camera-index 1 --duration-seconds 30
+```
+
+Thêm `--output outputs/private/camera_benchmark.json` nếu muốn lưu riêng báo cáo
+thống kê tổng hợp. Camera smoke test: `python scripts/check_camera.py --frames 30`.
 Video và ảnh không được ghi mặc định. Log CSV chỉ tạo khi bật `--log-csv`; bỏ
 đường dẫn để lưu tên tự sinh trong `outputs/private/`, hoặc chỉ định đường dẫn.
 Ghi video overlay chỉ khi chủ động bật `--record-output`; mặc định cũng nằm trong
 `outputs/private/`. Chỉ bật ghi hình khi đã có đồng ý phù hợp. So sánh replay:
 `python scripts/replay.py --source data/private/consented_demo.mp4`.
+
+Để chạy từng tình huống tương tác (cửa sổ chờ Space trước mỗi pha; `s` bỏ qua
+giảm sáng tùy chọn, `q` dừng), dùng `python scripts/benchmark_camera.py
+--camera-index 1 --interactive-scenarios --output outputs/private/camera_interactive.json`.
+Báo cáo chỉ giữ số liệu tổng hợp, không lưu ảnh, frame, đặc trưng hay video.
 
 Ví dụ chạy headless kèm log riêng tư:
 
@@ -65,10 +82,10 @@ ruff check .
 
 ## Đối chiếu đề bài
 
-Đề bài upstream mô tả capstone Track 4, 2 giờ xây dựng, demo tối đa 10 phút, ít
+Đề bài upstream mô tả capstone Track 4, demo tối đa 10 phút, ít
 nhất hai trụ cột, một số đo, một ca lỗi và dữ liệu an toàn. Upstream giới thiệu
 bảy trụ cột và sáu tiêu chí chấm trên 100 điểm. Hướng dẫn triển khai này mở rộng
-phạm vi thành CP0–CP10 và khuyến nghị sáu trụ cột. Điều kiện làm cá nhân được ghi
+phạm vi thành CP0–CP12 và khuyến nghị sáu trụ cột. Điều kiện làm cá nhân được ghi
 minh bạch như chưa chứng minh tuân thủ yêu cầu đội; quyết định thuộc ban tổ chức.
 
 ## Tài liệu

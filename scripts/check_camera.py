@@ -7,12 +7,19 @@ import argparse
 import sys
 from time import monotonic
 
-from vinfast_dms.sources import SourceError, VideoSource
+import cv2
+
+from vinfast_dms.sources import DEFAULT_CAMERA_INDEX, SourceError, VideoSource
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--camera-index", type=int, default=0)
+    parser.add_argument(
+        "--camera-index",
+        type=int,
+        default=DEFAULT_CAMERA_INDEX,
+        help="Chỉ số webcam (mặc định 1: camera tích hợp MacBook Pro M4 đã xác minh).",
+    )
     parser.add_argument("--frames", type=int, default=30)
     parser.add_argument(
         "--duration-seconds",
@@ -30,6 +37,17 @@ def main() -> int:
         with VideoSource(
             "camera", camera_index=args.camera_index, width=args.width, height=args.height
         ) as source:
+            capture = source.capture
+            assert capture is not None
+            try:
+                backend = capture.getBackendName()
+            except cv2.error:
+                backend = "không xác định"
+            try:
+                actual_width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+                actual_height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            except cv2.error:
+                actual_width = actual_height = 0
             start = monotonic()
             count = 0
             while True:
@@ -46,11 +64,15 @@ def main() -> int:
         print(f"Camera check NOT RUN/BLOCKED: {exc}", file=sys.stderr)
         return 2
     if args.duration_seconds is None:
-        print(f"camera smoke PASS: đã đọc {count} khung hình webcam thật.")
+        print(
+            f"camera smoke PASS: index={args.camera_index}, backend={backend}, "
+            f"capture={actual_width}×{actual_height}, đã đọc {count} khung hình webcam thật."
+        )
     else:
         print(
-            f"camera smoke PASS: đã đọc {count} khung hình webcam thật trong "
-            f"{args.duration_seconds:.1f} giây."
+            f"camera smoke PASS: index={args.camera_index}, backend={backend}, "
+            f"capture={actual_width}×{actual_height}, đã đọc {count} khung hình "
+            f"webcam thật trong {args.duration_seconds:.1f} giây."
         )
     return 0
 

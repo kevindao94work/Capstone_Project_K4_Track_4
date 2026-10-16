@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import pytest
 
+import vinfast_dms.sources as sources_module
 from vinfast_dms.sources import SourceError, VideoSource
 
 
@@ -53,6 +54,101 @@ def test_camera_capture_is_released_on_exception(monkeypatch: pytest.MonkeyPatch
     with pytest.raises(RuntimeError):
         with VideoSource("camera") as source:
             raise RuntimeError("fixture")
+    assert source.capture is None
+    assert capture.released
+
+
+def test_macos_camera_prefers_avfoundation_and_releases(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FakeCapture:
+        released = False
+
+        def isOpened(self) -> bool:
+            return True
+
+        def set(self, *_: object) -> bool:
+            return True
+
+        def read(self) -> tuple[bool, np.ndarray]:
+            return True, np.zeros((12, 16, 3), dtype=np.uint8)
+
+        def release(self) -> None:
+            self.released = True
+
+    capture = FakeCapture()
+    calls: list[tuple[object, ...]] = []
+
+    def open_camera(*arguments: object) -> FakeCapture:
+        calls.append(arguments)
+        return capture
+
+    monkeypatch.setattr(sources_module.sys, "platform", "darwin")
+    monkeypatch.setattr(cv2, "VideoCapture", open_camera)
+    with VideoSource("camera", camera_index=1) as source:
+        assert next(source).frame.shape == (12, 16, 3)
+    assert calls == [(1, cv2.CAP_AVFOUNDATION)]
+    assert capture.released
+
+
+def test_camera_falls_back_to_generic_backend_when_avfoundation_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FakeCapture:
+        def __init__(self, opened: bool) -> None:
+            self.opened = opened
+            self.released = False
+
+        def isOpened(self) -> bool:
+            return self.opened
+
+        def set(self, *_: object) -> bool:
+            return True
+
+        def release(self) -> None:
+            self.released = True
+
+    failed, working = FakeCapture(False), FakeCapture(True)
+    captures = [failed, working]
+    calls: list[tuple[object, ...]] = []
+
+    def open_camera(*arguments: object) -> FakeCapture:
+        calls.append(arguments)
+        return captures.pop(0)
+
+    monkeypatch.setattr(sources_module.sys, "platform", "darwin")
+    monkeypatch.setattr(cv2, "VideoCapture", open_camera)
+    with VideoSource("camera", camera_index=1):
+        pass
+    assert calls == [(1, cv2.CAP_AVFOUNDATION), (1,)]
+    assert failed.released and working.released
+
+
+def test_camera_read_failure_is_reported_and_released(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FakeCapture:
+        released = False
+
+        def isOpened(self) -> bool:
+            return True
+
+        def set(self, *_: object) -> bool:
+            return True
+
+        def read(self) -> tuple[bool, None]:
+            return False, None
+
+        def release(self) -> None:
+            self.released = True
+
+    capture = FakeCapture()
+    monkeypatch.setattr(cv2, "VideoCapture", lambda *_: capture)
+    with VideoSource("camera", camera_index=1) as source:
+        with pytest.raises(SourceError, match="ngừng gửi"):
+            next(source)
+        assert source.capture_read_attempts == 1
+        assert source.capture_failures == 1
     assert source.capture is None
     assert capture.released
 

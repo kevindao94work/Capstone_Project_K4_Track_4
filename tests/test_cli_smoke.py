@@ -1,6 +1,12 @@
 import subprocess
 import sys
 
+from vinfast_dms.cli import build_parser
+
+
+def test_camera_index_defaults_to_builtin_and_can_be_overridden() -> None:
+    assert build_parser().parse_args([]).camera_index == 1
+    assert build_parser().parse_args(["--camera-index", "0"]).camera_index == 0
 
 def test_model_downloader_help() -> None:
     result = subprocess.run(
@@ -57,3 +63,16 @@ def test_replay_script_help() -> None:
     )
     assert result.returncode == 0
     assert "--source" in result.stdout
+
+
+def test_camera_benchmark_help_does_not_open_camera() -> None:
+    result = subprocess.run(
+        [sys.executable, "scripts/benchmark_camera.py", "--help"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0
+    assert "--camera-index" in result.stdout
+    assert "--duration-seconds" in result.stdout
+    assert "--guided-scenarios" in result.stdout

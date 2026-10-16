@@ -66,12 +66,14 @@ hay chẩn đoán buồn ngủ.
 
 ## Dữ liệu, quyền riêng tư và an toàn
 
-Hiện không có dữ liệu người thật, clip được consent, nhãn thủ công hay media công
-khai. Unit test dùng mảng/landmark/video tổng hợp và chỉ xác nhận hành vi kỹ thuật.
-Ảnh/video không ghi theo mặc định. CSV chỉ ghi khi bật `--log-csv`; video chỉ ghi
-khi bật `--record-output`. `data/private/` và `outputs/private/` bị loại khỏi Git;
-model `.task` cũng không commit. Không dùng dữ liệu bệnh nhân, sinh viên hoặc người
-bên thứ ba không đồng ý.
+Chưa có dataset video người thật được lưu với consent, nhãn thủ công hoặc media
+công khai. Trong CP12, tác giả trực tiếp làm người tham gia cho webcam spot-check
+theo cue; chỉ số tổng hợp không được xem là nhãn độc lập. Unit test dùng
+mảng/landmark/video tổng hợp và chỉ xác nhận hợp đồng kỹ thuật. Ảnh/video không ghi
+theo mặc định. CSV chỉ ghi khi bật `--log-csv`; video chỉ ghi khi bật
+`--record-output`. `data/private/` và `outputs/private/` bị loại khỏi Git; model
+`.task` cũng không commit. Không dùng dữ liệu bệnh nhân, sinh viên hoặc người bên
+thứ ba không đồng ý.
 
 Prototype không được kết nối điều khiển xe, phanh, vô lăng hoặc hệ thống khẩn cấp.
 False negative có thể bỏ lỡ dấu hiệu cần quan sát; cảnh báo nhầm có thể gây mất
@@ -80,20 +82,25 @@ toàn của tài xế.
 
 ## Số đo và bằng chứng hiện có
 
-Tại CP9, `.venv/bin/python -m pytest -q` có 90 passed; ở CP10, clean install
-Python 3.11 có **92 passed**, ruff, compileall và `pip check` đều qua. Đây là
-kiểm chứng code, không phải độ chính xác hoặc tốc độ ngoài thực địa. Chưa có
-benchmark trên video người thật, FPS webcam, latency thực, số false alarm, event
-delay hay so sánh baseline có nhãn. Xem [kết quả thực nghiệm](KET_QUA_THUC_NGHIEM.md)
+CP12 đã chạy benchmark 60 giây trên webcam index 1: nguồn 29,94 FPS, throughput
+headless 29,94 FPS, pipeline processing capacity 121,66 FPS, latency pipeline
+mean/p50/p95 là 8,22/8,64/10,90 ms, và 80,08% frame pipeline-valid. Một lượt
+spot-check tương tác ghi nhận hành vi dự đoán theo cue, nhưng không lưu media hoặc
+nhãn độc lập; một tín hiệu false-warning không tái hiện được. Các số này mô tả
+thiết bị/phiên cụ thể, không phải accuracy, false-alarm rate có nhãn hay event
+delay. Kết quả kiểm thử cuối và phương pháp xem tại [kết quả thực nghiệm](KET_QUA_THUC_NGHIEM.md)
 và [phương pháp](PHUONG_PHAP_DANH_GIA.md).
 
 ## Ca lỗi và giới hạn
 
-Chưa có ca lỗi thật nào được tái hiện. Kịch bản che mặt/mất track trả `UNKNOWN` là
-stress test, không phải lỗi khi đó là trạng thái đúng. Quy trình tương lai được ghi
-ở [phân tích ca lỗi](PHAN_TICH_CA_LOI.md). Tập hiện tại chưa cho phép ước lượng
-thiên lệch do kính, ánh sáng, da, camera, khẩu trang, rung xe, góc lắp đặt hoặc
-khác biệt giữa người dùng.
+Spot-check ghi nhận một bất thường ứng viên ở pha nhìn thẳng nhưng lượt lặp không
+tái hiện; pha quay trái có coverage thấp và `high_reprojection_error` nhưng chưa
+có mốc sự kiện đủ để khẳng định missed event. Chưa có ca lỗi với root cause được
+xác nhận. Kịch bản che mặt/mất track trả `UNKNOWN` là stress test, không phải lỗi
+khi đó là trạng thái đúng. Quy trình tương lai được ghi ở
+[phân tích ca lỗi](PHAN_TICH_CA_LOI.md). Tập hiện tại chưa cho phép ước lượng thiên
+lệch do kính, ánh sáng, da, camera, khẩu trang, rung xe, góc lắp đặt hoặc khác biệt
+giữa người dùng.
 
 ## Impact giả định và tự đánh giá rubric
 
@@ -111,10 +118,10 @@ API Face Landmarker tham chiếu [tài liệu MediaPipe Tasks](https://ai.google
 | Tiêu chí chính thức | Trọng số | Tự chấm sơ bộ | Căn cứ và khoảng trống |
 |---|---:|---:|---|
 | Vận dụng kiến thức đã học | 25 | 20 | EAR, PnP, uncertainty, temporal có test; chưa có hiệu chuẩn hoặc dữ liệu thật. |
-| Demo chạy được | 25 | 10 | CLI video/headless và fixture chạy; webcam chưa kiểm tra, chưa có clip người thật dự phòng. |
+| Demo chạy được | 25 | 10 | Webcam và overlay chạy; chưa có clip consent dự phòng và chưa đánh giá nhận diện độc lập. |
 | Độ hữu ích | 15 | 8 | Nhóm người dùng và vấn đề được nêu; chưa xác nhận nhu cầu với VinFast/đội xe. |
 | Impact | 15 | 8 | Có phép tính giả định kèm rủi ro; chưa có đầu vào hoặc tác động thực tế. |
-| Bằng chứng | 10 | 3 | 90 test kỹ thuật có thể chạy lại; thiếu số đo thực và ca lỗi thật. |
+| Bằng chứng | 10 | 3 | 105 test kỹ thuật có thể chạy lại và webcam benchmark; thiếu nhãn độc lập và ca lỗi xác nhận. |
 | Trình bày và hỏi đáp | 10 | 5 | Có kịch bản và câu hỏi; chưa diễn tập/đánh giá, tiêu chí upstream giả định team. |
 | **Tổng tự chấm sơ bộ** | **100** | **54** | Không phải điểm do ban tổ chức xác nhận. |
 

@@ -317,3 +317,47 @@ từ unit test.
 - Tiếp theo: khởi động lại terminal/app được cấp quyền Camera rồi chạy lại. Nếu
   vẫn lỗi, kiểm tra đúng ứng dụng đã bật trong **System Settings → Privacy &
   Security → Camera**. Các metric trên người và FPS thật vẫn chưa có.
+
+### CP12 — Webcam tích hợp, spot-check tương tác và kiểm định cuối
+
+- Thời điểm UTC: 2026-10-16 13:14 UTC.
+- Trạng thái: PASS cho chọn/capture camera index 1, xử lý pipeline live, benchmark
+  hiệu năng aggregate, spot-check theo cue và hồi quy video tổng hợp. Chưa chứng
+  minh accuracy/false alarms có nhãn độc lập, ca lỗi có root cause xác nhận hoặc
+  mục tiêu 12 FPS trung vị.
+- Đã thay đổi: `src/vinfast_dms/sources.py` ưu tiên AVFoundation trên macOS, mặc
+  định index 1, fallback backend, đếm lỗi đọc và giải phóng resource; CLI/checker
+  dùng index 1 mặc định. `PipelineResult` phân biệt mặt được detector thấy với
+  landmark qua quality gate. `scripts/benchmark_camera.py` đo webcam headless,
+  cue tương tác từng pha và cho phép lặp pha chọn lọc; chỉ xuất aggregate. Tests,
+  README, báo cáo, checklist, kịch bản demo và phân tích lỗi được cập nhật.
+- Lệnh đã chạy: `scripts/check_camera.py --frames 30` → 30 frame thật, PASS;
+  DMS live headless và cửa sổ xử lý 120 frame mỗi lượt, thoát sạch. Benchmark 60 s
+  → 1.797 frame, AVFoundation 640×480, 0/1.797 lỗi đọc, nguồn 29,94 FPS, headless
+  throughput 29,94 FPS, pipeline capacity 121,66 FPS, latency mean/p50/p95 là
+  8,22/8,64/10,90 ms; 1.458/1.797 frame phát hiện mặt và 1.439/1.797 frame
+  pipeline-valid. Kiểm tra tương tác hoàn tất 8 pha bắt buộc, bỏ qua pha giảm sáng;
+  1.505 frame trong các pha, 0/3.009 lần đọc webcam lỗi. Pha nhắm mắt có 59 frame
+  `EYES_CLOSED`; pha nhìn thẳng lần đầu có 137/181 `DISTRACTED` nhưng lượt lặp có
+  181/181 `NORMAL`, 0 cảnh báo; pha quay trái có 131/211 `UNKNOWN`, log 126
+  `high_reprojection_error`. Đây là quan sát theo cue, không phải metric có nhãn
+  độc lập.
+- QA CP12: `.venv/bin/python -m pytest -q` → **105 passed**; `ruff check .`,
+  `compileall`, `pip check`, `scripts/check_environment.py` thành công. AVI đen tổng
+  hợp 30 frame trong thư mục tạm: replay 2 lượt, chữ ký dự đoán giống nhau.
+  `scripts/validate_submission.py --allow-dirty --skip-sync` qua; rà 58 file
+  tracked sau stage, không media/private/model/secret; author và liên kết đúng.
+- Điều kiện chấp nhận: webcam index 1 capture frame và pipeline chạy; cửa sổ
+  overlay/cue hiển thị; blink/nhắm mắt, cảnh báo theo thời gian, mất mặt/che mặt và
+  `UNKNOWN` được quan sát; capture lỗi có test cleanup. Một lần mở camera thất bại
+  thoáng qua trước đó, retry thành công; các lượt đo CP12 sau đó không lỗi đọc.
+- Phần chưa kiểm chứng: pha giảm sáng đã bỏ qua; chưa có video được lưu với consent
+  và nhãn độc lập, precision/recall/F1, false alarms/phút, event-to-warning,
+  camera-to-display, median FPS theo cửa sổ, baseline có nhãn hoặc ca lỗi tái hiện
+  ổn định kèm root cause/mitigation. Các báo cáo ghi rõ các giới hạn này.
+- Commit/push: CP12 được commit lên `main`, push tới `origin` hiện có; sau fetch,
+  SHA local khớp remote-tracking `origin/main`. Không rewrite lịch sử hoặc force-push.
+- Minh chứng: `outputs/private/camera_benchmark_cp12_retry.json`,
+  `outputs/private/camera_interactive_cp12.json` và
+  `outputs/private/camera_normal_repro_cp12.json` chỉ chứa aggregate, bị ignore và
+  không commit; replay fixture nằm trong thư mục tạm.
