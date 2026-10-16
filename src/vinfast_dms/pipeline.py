@@ -17,6 +17,13 @@ from vinfast_dms.temporal import (
     StateSnapshot,
     TemporalStateMachine,
 )
+from vinfast_dms.uncertainty import (
+    QualityAssessment,
+    assess_frame,
+    assess_landmarks,
+    eye_quality_reason,
+    pose_quality_reason,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,43 +55,48 @@ class DMSPipeline:
     def process(self, sample: FrameSample) -> PipelineResult:
         start_ns = perf_counter_ns()
         frame = sample.frame
-        height, width = frame.shape[:2]
-        detected = self.landmarker.detect_bgr(frame, sample.timestamp_ms)
+        frame_reason = assess_frame(frame)
+        if isinstance(frame, np.ndarray) and frame.ndim >= 2:
+            height, width = frame.shape[:2]
+        else:
+            height, width = 0, 0
+        if frame_reason is not None:
+            assessment = QualityAssessment(False, frame_reason)
+        else:
+            detected = self.landmarker.detect_bgr(frame, sample.timestamp_ms)
+            assessment = assess_landmarks(
+                detected, width, height, self.config.vision.min_face_fraction
+            )
         points: np.ndarray | None = None
         eyes: EyeMetrics | None = None
         pose: HeadPose | None = None
-        reason = detected.reason
+        reason: str | None = frame_reason.value if frame_reason is not None else None
         valid = False
-        if detected.face_count != 1:
-            reason = reason or ("no_face" if detected.face_count == 0 else "multiple_faces")
+        if not assessment.valid:
+            reason = (
+                assessment.reason.value
+                if assessment.reason is not None
+                else "invalid_measurement"
+            )
         else:
-            points = np.asarray(detected.faces[0], dtype=np.float64)
-            if points.ndim != 2 or points.shape[1] < 2 or len(points) < 478:
-                reason = "invalid_landmark_shape"
-            elif not np.isfinite(points[:, :2]).all():
-                reason = "non_finite_landmarks"
-            elif np.any(points[:, :2] < -0.1) or np.any(points[:, :2] > 1.1):
-                reason = "landmarks_out_of_bounds"
+            points = assessment.landmarks
+            assert points is not None
+            eyes = measure_eyes(points, width, height)
+            pose = estimate_head_pose(
+                points,
+                width,
+                height,
+                max_reprojection_error_px=self.config.vision.max_reprojection_error_px,
+            )
+            eye_reason = eye_quality_reason(eyes)
+            pose_reason = pose_quality_reason(pose)
+            if eye_reason is not None:
+                reason = eye_reason.value
+            elif pose_reason is not None:
+                reason = pose_reason.value
             else:
-                span = np.ptp(points[:, :2], axis=0)
-                face_fraction = float(span[0] * span[1])
-                if face_fraction < self.config.vision.min_face_fraction:
-                    reason = "face_too_small"
-                else:
-                    eyes = measure_eyes(points, width, height)
-                    pose = estimate_head_pose(
-                        points,
-                        width,
-                        height,
-                        max_reprojection_error_px=self.config.vision.max_reprojection_error_px,
-                    )
-                    if not eyes.valid:
-                        reason = eyes.reason
-                    elif not pose.valid:
-                        reason = pose.reason
-                    else:
-                        reason = None
-                        valid = True
+                reason = None
+                valid = True
         sample_features = FeatureSample(
             timestamp_s=sample.timestamp_s,
             ear_left=eyes.ear_left if eyes and eyes.valid else None,

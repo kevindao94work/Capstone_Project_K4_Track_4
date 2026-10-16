@@ -104,6 +104,29 @@ từ unit test.
 - Phần chưa kiểm chứng: clip 100 khung chỉ là fixture trống để kiểm thử độ bền,
   không phải demo nhận diện hay benchmark hiệu năng; chưa mở cửa sổ tương tác hoặc
   webcam do quyền Camera chưa được cấp.
-- Commit/push: SHA sẽ được ghi và đối chiếu ở CP4.
+- Commit/push: `0dc6a7ed234a3ed8a0ec6b2992fe7bf67eb9441b`; đã push `main`, sau
+  `git fetch origin`, `HEAD` và `origin/main` cùng SHA.
 - Minh chứng: `tests/test_temporal.py`, `tests/test_pipeline.py`,
   `tests/test_overlay.py`, `tests/test_cli_smoke.py`.
+
+### CP4 — Bất định, PnP và lọc nhiễu nâng cao
+
+- Thời điểm UTC: 2026-10-16 12:06 UTC.
+- Trạng thái: PASS cho cổng chất lượng, PnP và kiểm thử tổng hợp; chưa đánh giá
+  chất lượng trên người thật.
+- Đã thay đổi: `src/vinfast_dms/uncertainty.py`, pipeline/overlay và
+  `tests/test_uncertainty.py`, `tests/test_pipeline.py`.
+- Lệnh đã chạy: `python -m compileall -q src scripts tests` → 0;
+  `ruff check .` → 0 lỗi; `pytest -q` → 64 passed;
+  `python -m pip check` → sạch; CLI/model chạy lại fixture 100 khung → exit 0.
+- Điều kiện chấp nhận: reason code tách riêng cho không có mặt, nhiều mặt, lỗi
+  inference, frame sai, landmark sai hình dạng/NaN/ngoài khung, mặt nhỏ, thiếu
+  mắt, EAR bất hợp lý, solvePnP thất bại, residual cao, timestamp lỗi và gap;
+  14 kiểm thử bất định/hình học và pipeline bao gồm ít nhất tám tình huống lỗi.
+  Mất mặt hoặc gap trả `UNKNOWN`, reset dwell/EMA và không giữ cảnh báo cũ.
+- Phần chưa kiểm chứng: ngưỡng diện tích mặt và residual là heuristic; chưa đo
+  blur/brightness và không tạo confidence giả; pose chưa hiệu chuẩn theo camera.
+  Video 100 khung là clip trống tổng hợp, không đại diện người thật.
+- Commit/push: SHA sẽ được ghi và đối chiếu ở CP5.
+- Minh chứng: `tests/test_uncertainty.py`, `tests/test_pipeline.py`,
+  `tests/test_temporal.py`, `tests/test_geometry.py`.

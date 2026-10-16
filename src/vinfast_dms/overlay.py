@@ -17,18 +17,25 @@ from vinfast_dms.temporal import STATE_LABELS_VI, DMSState
 REASON_LABELS_VI = {
     "no_face": "Không thấy khuôn mặt",
     "multiple_faces": "Có nhiều khuôn mặt trong khung",
+    "inference_error": "Lỗi xử lý hình ảnh",
+    "invalid_frame": "Khung hình không hợp lệ",
+    "invalid_frame_size": "Kích thước khung hình không hợp lệ",
     "face_too_small": "Khuôn mặt quá nhỏ",
     "invalid_landmark_shape": "Cấu trúc mốc khuôn mặt không hợp lệ",
     "non_finite_landmarks": "Mốc khuôn mặt không hữu hạn",
     "landmarks_out_of_bounds": "Mốc khuôn mặt ngoài khung ảnh",
     "missing_eye_landmarks": "Thiếu mốc hai mắt",
     "non_finite_eye_landmarks": "Mốc mắt không hợp lệ",
+    "invalid_eye_landmarks": "Mốc mắt không đáng tin cậy",
+    "missing_pose_landmarks": "Thiếu mốc tư thế đầu",
+    "invalid_camera_matrix": "Thông số camera không hợp lệ",
     "zero_eye_width": "Khoảng cách ngang mắt bằng không",
     "implausible_ear": "Tỷ lệ mắt bất hợp lý",
     "solvepnp_failed": "Không ước lượng được tư thế đầu",
     "high_reprojection_error": "Sai số hình học quá lớn",
     "time_gap": "Khoảng cách giữa khung hình quá dài",
     "invalid_timestamp": "Dấu thời gian không hợp lệ",
+    "non_monotonic_timestamp": "Dấu thời gian không tăng",
 }
 
 
@@ -101,8 +108,13 @@ def draw_overlay(
         font=_font(18),
         fill=(231, 238, 246),
     )
-    validity = "Hợp lệ" if result.quality_valid else "Không xác định"
-    reason = REASON_LABELS_VI.get(result.quality_reason or "", result.quality_reason or "")
+    validity = (
+        "Hợp lệ"
+        if result.quality_valid and result.state != DMSState.UNKNOWN
+        else "Không xác định"
+    )
+    reason_code = result.quality_reason or result.snapshot.reason or ""
+    reason = REASON_LABELS_VI.get(reason_code, reason_code)
     detail = validity if not reason else f"{validity} · {reason}"
     draw.text((24, 78), detail, font=_font(16), fill=(255, 205, 145))
     draw.text(

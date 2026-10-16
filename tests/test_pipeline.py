@@ -110,3 +110,25 @@ def test_pipeline_multiple_faces_is_unknown() -> None:
     result = pipeline.process(_sample(0, 0.0))
     assert result.state == DMSState.UNKNOWN
     assert result.quality_reason == "multiple_faces"
+
+
+def test_pipeline_invalid_frame_is_unknown_without_running_model() -> None:
+    class NeverRun:
+        def detect_bgr(self, frame: np.ndarray, timestamp_ms: int) -> LandmarkResult:
+            raise AssertionError("landmarker must not receive a malformed frame")
+
+        def close(self) -> None:
+            pass
+
+    sample = _sample(0, 0.0)
+    malformed = FrameSample(
+        np.zeros((480, 640), dtype=np.uint8),
+        sample.index,
+        sample.timestamp_s,
+        sample.timestamp_ms,
+        sample.source_type,
+        sample.source_name,
+    )
+    result = DMSPipeline(NeverRun(), Config()).process(malformed)
+    assert result.state == DMSState.UNKNOWN
+    assert result.quality_reason == "invalid_frame"
