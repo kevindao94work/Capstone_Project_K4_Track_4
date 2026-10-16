@@ -1,0 +1,33 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Raw/private recordings and measurements
+data/private/*
+!data/private/README.md
+outputs/private/*
+!outputs/private/README.md
+*.mp4
+*.mov
+*.avi
+*.m4v
+*.webm
+
+# Model artifacts are downloaded on demand and are not committed.
+models/*.task
+models/*.tflite
