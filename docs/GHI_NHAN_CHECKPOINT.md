@@ -56,6 +56,28 @@ từ unit test.
   trong `models/` và bị Git bỏ qua.
 - Phần chưa kiểm chứng: chưa đọc 30 khung webcam do chưa cấp quyền; không có clip
   người thật. Tích hợp model trên ảnh tổng hợp không phải kết quả nhận diện người.
-- Commit/push: SHA sẽ được đối chiếu ngay sau commit CP1 và ghi ở checkpoint kế.
+- Commit/push: `0368cb5d184ee0fa4b2a95c75fdc688848a25987`; đã push `main`, sau
+  `git fetch origin`, `HEAD` và `origin/main` cùng SHA.
 - Minh chứng: `tests/test_sources.py`, `tests/test_landmarks.py`,
   `tests/test_cli_smoke.py`; model tải cục bộ, không commit.
+
+### CP2 — EAR, head pose và kiểm thử hình học
+
+- Thời điểm UTC: 2026-10-16 11:58 UTC.
+- Trạng thái: PASS cho kiểm thử hình học tổng hợp; chưa đánh giá góc đầu trên
+  người thật.
+- Đã thay đổi: `src/vinfast_dms/geometry.py`, `tests/test_geometry.py`.
+- Lệnh đã chạy: `ruff check --fix src tests` → 0 lỗi;
+  `python -m compileall -q src scripts tests` → 0;
+  `pytest -q tests/test_geometry.py` → 17 passed.
+- Điều kiện chấp nhận: hai EAR tính từ pixel hóa landmark chuẩn hóa; kiểm tra
+  missing, NaN/inf, mẫu số 0, EAR bất hợp lý và kích thước ảnh; PnP dùng sáu mốc
+  nose/chin/eye corners/mouth corners, kiểm tra residual pixel; test tịnh tiến,
+  scale, dấu yaw hai chiều, pitch/roll dựng sẵn và lỗi PnP. Mốc mắt đối chiếu với
+  topology chính thức trong [MediaPipe face mesh connections](https://github.com/google-ai-edge/mediapipe/blob/master/mediapipe/python/solutions/face_mesh_connections.py)
+  (các vùng mắt ở `FACEMESH_LEFT_EYE`, `FACEMESH_RIGHT_EYE`, mũi, cằm và môi).
+- Phần chưa kiểm chứng: 3D reference points là hình mặt quy mô tùy ý; không phải
+  hệ tọa độ mét, intrinsics vẫn là heuristic và test không chứng minh góc chính
+  xác trên camera thật.
+- Commit/push: SHA sẽ được đối chiếu sau commit CP2 và lưu ở CP3.
+- Minh chứng: `tests/test_geometry.py` (17 fixture tổng hợp, chỉ là test thuật toán).
