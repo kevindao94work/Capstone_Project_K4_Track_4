@@ -69,7 +69,7 @@ Nếu không có video đã được phép, dành thời gian này để chỉ c
 - **Trụ cột:** pretrained Face Landmarker; hình học EAR/PnP; uncertainty với
   `UNKNOWN`; thời gian với EMA/dwell; log/replay/evaluation. Nêu test file tương
   ứng và giới hạn PnP chưa hiệu chuẩn.
-- **Số đo:** hiện 90 test kỹ thuật đã pass theo biên bản CP8; đây không phải metric
+- **Số đo:** hiện 92 test kỹ thuật đã pass theo kiểm định CP10; đây không phải metric
   thực nghiệm. Confusion matrix, event delay, latency, FPS và baseline chỉ được
   báo khi có video + nhãn thật.
 - **Ca lỗi:** chưa có ca lỗi thực; mất mặt trả UNKNOWN là hành vi fallback đúng,

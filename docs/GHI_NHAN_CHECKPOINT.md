@@ -263,7 +263,38 @@ từ unit test.
 - Phần chưa kiểm chứng: chưa diễn tập; chưa có webcam/video người thật, metric
   thực hoặc failure thật; tự chấm không phải điểm giám khảo. Bài cá nhân chưa
   chứng minh điều kiện nhóm và VLearn chưa nộp.
-- Commit/push: SHA sẽ được xác minh và ghi ở CP10; commit CP9 chưa tạo tại thời
-  điểm biên bản.
+- Commit/push: `96705644b8ab8924da18c555e78badec7e96a2df`; đã push `main`, sau
+  `git fetch origin`, `HEAD` và `origin/main` cùng SHA.
 - Minh chứng: tám tài liệu CP9 trong `docs/`, liên kết trong `README.md`; rà soát
   README và tài liệu không tìm thấy placeholder.
+
+### CP10 — Kiểm thử cuối và phát hành repo
+
+- Thời điểm UTC: 2026-10-16 12:24 UTC.
+- Trạng thái: PASS cho cài đặt sạch, tests/lint/compile, model reproducibility,
+  video smoke, privacy scan, GitHub public visibility và đồng bộ sẽ được xác minh
+  sau commit; BLOCKED-QUYỀN cho webcam vì macOS báo camera chưa được cấp quyền.
+- Đã thay đổi: `scripts/validate_submission.py`, kiểm thử help/validator trong
+  `tests/test_benchmark.py`, checklist, kết quả cuối và kịch bản demo. Venv sạch
+  được tạo ngoài repo bằng Python 3.11; `pip install -e '.[dev]'` thành công.
+- Lệnh đã chạy: trong venv sạch, `pytest -q` → 92 passed, `ruff check .`,
+  `compileall`, `pip check` và `scripts/check_environment.py` đều exit 0. Model
+  được tải lại từ Google Storage với SHA-256 khớp
+  `64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff`. Video
+  fixture trống 30 frame được DMS xử lý, tạo 30 dòng CSV và trạng thái cuối
+  `KHÔNG XÁC ĐỊNH`; replay 2 lượt/30 frame tái lập. Validator pre-commit → mọi
+  kiểm tra PASS. Public repository `origin` mở được ở GitHub.
+- Camera: đã thử chạy DMS live headless; macOS/OpenCV trả “not authorized to
+  capture video”, source báo không mở được webcam, exit 2 sau khoảng 1.8 giây.
+  Không xử lý frame webcam và không lưu ảnh, video hay CSV. Phải bật quyền cho
+  ứng dụng Terminal/Python tại **System Settings → Privacy & Security → Camera**
+  rồi mới chạy lại.
+- Điều kiện chấp nhận: cài mới và test sạch thành công; model checksum tái lập;
+  video fixture chỉ xác nhận luồng kỹ thuật, không được xem là accuracy; rà file
+  Git tracked, secret, media, model và đường dẫn ignore; xác nhận repo public.
+- Phần chưa kiểm chứng: webcam demo, video fallback người thật, metric thật, FPS
+  mục tiêu 12, ca lỗi thật và VLearn. Vì thiếu dữ liệu, không tạo tag `v1.0.0`.
+- Commit/push: SHA CP10 chính và `origin/main` sẽ được ghi sau khi commit/push và
+  fetch xác nhận; không force-push, giữ `origin` ban đầu.
+- Minh chứng: `scripts/validate_submission.py`, `docs/CHECKLIST_NOP_BAI.md`,
+  `docs/KET_QUA_THUC_NGHIEM.md`; fixture và venv sạch đều ở thư mục tạm.

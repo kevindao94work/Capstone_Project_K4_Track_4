@@ -22,16 +22,19 @@ vào bảng. Không lấy fixture tổng hợp làm metric thực nghiệm.
 
 ## Kiểm thử kỹ thuật đã chạy
 
-Tại CP8, `.venv/bin/python -m pytest -q` cho **90 passed**. RUFF, `compileall`,
-`pip check` cũng thành công. Test gồm hình học dựng sẵn, timestamp, FSM theo thời
-gian, lỗi quality, CSV/replay và exact confusion matrix trên fixture. Kết quả này
-chứng minh một số hợp đồng code đã được kiểm tra; không phải độ chính xác nhận diện,
-FPS webcam hay số liệu an toàn.
+Tại CP8, `.venv/bin/python -m pytest -q` cho 90 passed. CP10 dựng venv Python 3.11
+mới, cài `pip install -e '.[dev]'`, rồi chạy `.venv/bin/python -m pytest -q` tương
+đương trong venv sạch: **92 passed**. RUFF, `compileall`, `pip check` và
+`scripts/check_environment.py` cũng thành công trong môi trường sạch. Test gồm
+hình học dựng sẵn, timestamp, FSM theo thời gian, lỗi quality, CSV/replay, manifest
+và exact confusion matrix trên fixture. Đây là kiểm chứng hợp đồng code; không phải
+độ chính xác nhận diện, FPS webcam hay số liệu an toàn.
 
-Model MediaPipe Tasks chạy trên clip đen tổng hợp 100 frame và trả `UNKNOWN` vì
-không có mặt; thử codec/replay cũng dùng clip tổng hợp trong thư mục tạm. Các thử
-nghiệm này xác nhận luồng không crash và file có thể đọc lại, không đánh giá khả
-năng nhận diện người.
+Model MediaPipe Tasks chạy trên clip đen tổng hợp 100 frame trước đó và 30 frame
+trong smoke CP10; đều trả `UNKNOWN` vì không có mặt. Thử codec/replay cũng dùng
+clip tổng hợp trong thư mục tạm. Smoke CP10 xử lý 30 frame, tạo 30 dòng CSV, rồi
+replay 2 lượt có chữ ký giống nhau. Các bước này xác nhận luồng không crash và
+file có thể đọc lại, không đánh giá khả năng nhận diện người.
 
 ## Mốc chấp nhận kỹ thuật và giả định
 

@@ -48,6 +48,7 @@ def test_benchmark_manifest_requires_schema_and_samples(tmp_path: Path) -> None:
         "scripts/evaluate.py",
         "scripts/benchmark.py",
         "scripts/reproduce_failure.py",
+        "scripts/validate_submission.py",
     ],
 )
 def test_evaluation_tools_help(script: str) -> None:
@@ -59,3 +60,19 @@ def test_evaluation_tools_help(script: str) -> None:
     )
     assert result.returncode == 0
     assert "--help" in result.stdout
+
+
+def test_submission_validator_precommit_mode() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/validate_submission.py",
+            "--allow-dirty",
+            "--skip-sync",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "Kiểm tra submission hoàn tất" in result.stdout

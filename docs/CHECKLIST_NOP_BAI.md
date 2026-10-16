@@ -6,10 +6,10 @@ Các mục `CHƯA KIỂM CHỨNG` cần được giữ nguyên trạng thái khi
 
 | # | Hạng mục | Trạng thái | Bằng chứng / thao tác cần làm |
 |---:|---|---|---|
-| 1 | Cài đặt, test, lint, compile và secret/privacy scan | CHƯA KIỂM CHỨNG cuối CP10 | Chạy lại trên môi trường sạch; xem log CP10. |
-| 2 | Repository public, origin đúng và commit remote khớp | CHƯA KIỂM CHỨNG cuối CP10 | Mở URL thật trong trình duyệt; kiểm tra branch và SHA. |
+| 1 | Cài đặt, test, lint, compile và secret/privacy scan | PASS CP10 | Cài mới Python 3.11, 92 test pass; validator quét file tracked, placeholder và ignore. |
+| 2 | Repository public, origin đúng và commit remote khớp | PASS sau push CP10 | [Repository public](https://github.com/kevindao94work/Capstone_Project_K4_Track_4); SHA sẽ được xác nhận trong biên bản CP10. |
 | 3 | Tên, MSSV và tác giả duy nhất thống nhất | PASS theo tài liệu hiện có | README và báo cáo ghi Đào Gia Bảo / 2A202602793; không teammate giả. |
-| 4 | Webcam trên máy demo đã chạy thật | CHƯA KIỂM CHỨNG | Cần quyền Camera macOS, sau đó thử trên đúng máy trình bày. |
+| 4 | Webcam trên máy demo đã chạy thật | BLOCKED-QUYỀN | Đã thử DMS; macOS báo chưa cấp Camera cho Terminal/Python. Bật quyền tại Privacy & Security → Camera rồi thử lại. |
 | 5 | Video fallback người thật có consent và được phép công bố | CHƯA CÓ | Chưa có clip; không dùng fixture tổng hợp làm video demo người thật. |
 | 6 | Ít nhất hai trụ cột có code và kiểm thử | PASS kỹ thuật | EAR/PnP, uncertainty, temporal FSM; xem `BAO_CAO_KY_THUAT.md`. |
 | 7 | Metric trên video thật có nhãn độc lập | CHƯA CÓ | Cần clip do tác giả quay, consent, label CSV, prediction log và báo cáo. |

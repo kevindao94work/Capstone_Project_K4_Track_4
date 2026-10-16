@@ -80,11 +80,12 @@ toàn của tài xế.
 
 ## Số đo và bằng chứng hiện có
 
-Đến thời điểm lập báo cáo: `.venv/bin/python -m pytest -q` có **90 passed**;
-ruff, compileall và `pip check` đều qua. Đây là kiểm chứng code, không phải độ
-chính xác hoặc tốc độ ngoài thực địa. Chưa có benchmark trên video người thật,
-FPS webcam, latency thực, số false alarm, event delay, hay so sánh baseline có
-nhãn. Xem [kết quả thực nghiệm](KET_QUA_THUC_NGHIEM.md) và [phương pháp](PHUONG_PHAP_DANH_GIA.md).
+Tại CP9, `.venv/bin/python -m pytest -q` có 90 passed; ở CP10, clean install
+Python 3.11 có **92 passed**, ruff, compileall và `pip check` đều qua. Đây là
+kiểm chứng code, không phải độ chính xác hoặc tốc độ ngoài thực địa. Chưa có
+benchmark trên video người thật, FPS webcam, latency thực, số false alarm, event
+delay hay so sánh baseline có nhãn. Xem [kết quả thực nghiệm](KET_QUA_THUC_NGHIEM.md)
+và [phương pháp](PHUONG_PHAP_DANH_GIA.md).
 
 ## Ca lỗi và giới hạn
 
