@@ -2,10 +2,11 @@
 
 **Người trình bày duy nhất:** Đào Gia Bảo — **MSSV:** 2A202602793.
 
-Kịch bản bám đúng 1 + 4 + 2 + 3 phút. Đã thử DMS live ở CP10 nhưng macOS báo
-Terminal/Python chưa được cấp quyền Camera; chưa có frame webcam được xử lý. Chưa
-có video người thật có consent trong repo; phần thao tác dưới đây là kế hoạch,
-không phải tuyên bố đã diễn ra. Không dùng fixture đen làm video demo nhận diện.
+Kịch bản bám đúng 1 + 4 + 2 + 3 phút. Đã thử lại DMS live sau khi bật quyền Camera,
+nhưng OpenCV vẫn báo `not authorized to capture video`; chưa có frame webcam được
+xử lý. Chưa có video người thật có consent trong repo; phần thao tác dưới đây là kế
+hoạch, không phải tuyên bố đã diễn ra. Không dùng fixture đen làm video demo nhận
+diện.
 
 ## 0:00–1:00 — Bài toán và người dùng
 

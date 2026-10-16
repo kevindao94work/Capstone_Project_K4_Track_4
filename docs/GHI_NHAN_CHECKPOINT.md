@@ -303,3 +303,17 @@ từ unit test.
   `HEAD` = `origin/main` = SHA này. `origin` giữ nguyên; không force-push.
 - Minh chứng: `scripts/validate_submission.py`, `docs/CHECKLIST_NOP_BAI.md`,
   `docs/KET_QUA_THUC_NGHIEM.md`; fixture và venv sạch đều ở thư mục tạm.
+
+### CP11 — Thử lại quyền webcam sau khi tác giả bật Camera
+
+- Thời điểm UTC: 2026-10-16 12:33 UTC.
+- Trạng thái: BLOCKED-QUYỀN. Tác giả xác nhận đã bật quyền Camera; lượt DMS live
+  vẫn bị macOS/OpenCV từ chối trước khi đọc được frame.
+- Lệnh: chạy DMS camera source ở chế độ headless, không bật CSV hoặc ghi video,
+  giới hạn tiến trình tối đa 60 giây. OpenCV trả `not authorized to capture video`
+  và `camera failed to properly initialize`; CLI báo không mở được webcam.
+- Kết quả: thoát mã 2 sau 4,3 giây; 0 frame xử lý. Không lưu ảnh, video hay CSV.
+  Đây là lỗi quyền/mở thiết bị, không phải kết quả đánh giá nhận diện.
+- Tiếp theo: khởi động lại terminal/app được cấp quyền Camera rồi chạy lại. Nếu
+  vẫn lỗi, kiểm tra đúng ứng dụng đã bật trong **System Settings → Privacy &
+  Security → Camera**. Các metric trên người và FPS thật vẫn chưa có.
