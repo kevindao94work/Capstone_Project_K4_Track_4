@@ -22,13 +22,15 @@ python -m pip install --upgrade pip
 python -m pip install -e '.[dev]'
 ```
 
-Tải model một lần bằng `python scripts/download_model.py` sau khi CP1 được triển
-khai. File model được lưu cục bộ, không theo dõi bằng Git.
+Tải model một lần bằng `python scripts/download_model.py`. File model được lưu
+cục bộ, không theo dõi bằng Git. Kiểm tra môi trường bằng
+`python scripts/check_environment.py`.
 
 ## Chạy
 
-Lệnh demo webcam và video sẽ được bổ sung cùng CLI ở CP1–CP5. Quyền webcam do
-macOS quản lý; cấp quyền trong **System Settings → Privacy & Security → Camera**.
+CLI demo webcam và video đang được hoàn thiện ở CP2–CP5. Script kiểm tra camera
+chỉ chạy khi tác giả chủ động gọi `python scripts/check_camera.py`; quyền webcam
+do macOS quản lý, cấp trong **System Settings → Privacy & Security → Camera**.
 Video và ảnh không được ghi mặc định. Log CSV chỉ tạo khi bật `--log-csv` và nằm
 trong `outputs/private/`.
 
