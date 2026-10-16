@@ -175,7 +175,40 @@ từ unit test.
   codec; fixture AVI roundtrip thành công, output hỏng/empty bị xóa.
 - Phần chưa kiểm chứng: chưa replay clip cá nhân có consent; chưa ghi video người
   thật. Những tệp fixture đều ở thư mục tạm và đã bị xóa khi kết thúc.
-- Commit/push: SHA sẽ được ghi và đối chiếu ở CP7.
+- Commit/push: `cc46eb65a32862c3bfcab8ff103ab631724763c9`; đã push `main`, sau
+  `git fetch origin`, `HEAD` và `origin/main` cùng SHA.
 - Minh chứng: `tests/test_logging.py`, `tests/test_cli_smoke.py`,
   `scripts/replay.py`; cột runtime bị bỏ qua khi so sánh gồm `run_id`,
   `wall_time_utc`, `processing_ms`.
+
+### CP7 — Nhãn độc lập và thực nghiệm định lượng
+
+- Thời điểm UTC: 2026-10-16 12:16 UTC.
+- Trạng thái: công cụ và metric fixture PASS; thực nghiệm video thật PENDING REAL
+  DATA, chưa tự nhận CP7 thực nghiệm PASS.
+- Đã thay đổi: `src/vinfast_dms/metrics.py`, `scripts/annotate_events.py`,
+  `scripts/evaluate.py`, `scripts/benchmark.py`, `tests/test_metrics.py`,
+  `tests/test_benchmark.py`. Manifest benchmark gồm cột `source,labels`; đường
+  dẫn tương đối tính theo thư mục manifest. Báo cáo, prediction log mặc định
+  trong `outputs/private/`.
+- Lệnh đã chạy: `.venv/bin/ruff check .` → exit 0;
+  `.venv/bin/python -m compileall -q src scripts tests` → exit 0;
+  `.venv/bin/python -m pytest -q` → 89 passed;
+  `.venv/bin/python -m pip check` → không có dependency lỗi;
+  `scripts/check_environment.py` → Python 3.11.15 arm64, NumPy 2.2.6,
+  OpenCV 4.14.0, MediaPipe 0.10.35, Tasks và solvePnP có sẵn; ba lệnh `--help`
+  của annotate/evaluate/benchmark → exit 0.
+- Điều kiện chấp nhận: fixture confusion matrix khớp chính xác; mẫu số 0 cho ra
+  `N/A`; khoảng nhãn chồng lấp/thời gian không hợp lệ bị từ chối; không nhãn hoặc
+  không có frame khớp cho ra `NOT EVALUATED`/exit 2. Có confusion matrix, precision,
+  recall, F1, coverage, UNKNOWN riêng, false alarms/phút NORMAL, onset delay theo
+  thời gian video, latency p50/p95, FPS nguồn/runtime, baseline threshold từng
+  frame và temporal FSM. Benchmark ghi môi trường, hardware, config/model hash và
+  giữ log riêng tư.
+- Phần chưa kiểm chứng: chưa có clip thật được đồng ý, nhãn độc lập, metric thật,
+  FPS trên người thật hoặc so sánh baseline thực nghiệm. Unit fixture chỉ kiểm
+  tra code, không được xem là thực nghiệm hay công bố kết quả.
+- Commit/push: SHA sẽ được bổ sung trong biên bản checkpoint kế tiếp; CP7 chưa
+  chuyển trạng thái PASS thực nghiệm. Push và SHA remote cần xác minh sau commit.
+- Minh chứng: `tests/test_metrics.py`, `tests/test_benchmark.py`; không tạo hoặc
+  xuất bản dữ liệu benchmark giả.
