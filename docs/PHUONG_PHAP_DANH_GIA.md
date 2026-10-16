@@ -5,9 +5,10 @@
 ## Tình trạng đánh giá
 
 Chưa có video được lưu với consent hoặc ground truth thủ công. Đã có benchmark
-hiệu năng webcam trực tiếp và spot-check tương tác không lưu media; vì vậy có thể
-báo cáo capture/FPS/latency và trạng thái quan sát theo pha, nhưng chưa có
-accuracy/F1/coverage hoặc false-alarm rate có nhãn độc lập.
+webcam trực tiếp và spot-check tương tác có ranh giới transition/hold/recovery;
+có thể báo cáo capture, latency, trạng thái, chất lượng, residual và coverage
+quan sát theo cue. Chưa có accuracy/F1, false-alarm rate hoặc event latency trên
+nhãn độc lập.
 
 ## Chuẩn bị dữ liệu riêng tư
 
@@ -66,7 +67,10 @@ log và JSON trong `outputs/private/benchmark/`, ghi phần cứng/phần mềm,
 checksum, config hash và metric từng clip. Không đưa artifact có dữ liệu cá nhân
 lên repo công khai.
 
-Đo hiệu năng xử lý trực tiếp từ webcam index 1 mà không lưu frame hoặc đặc trưng:
+Đo hiệu năng xử lý trực tiếp mà không lưu frame hoặc đặc trưng. Index 1 đã được
+dùng ở các phiên CP13; lần kiểm tra CLI cuối cùng macOS ánh xạ camera tích hợp sang
+index 0. Chạy `scripts/check_camera.py --camera-index N --frames 30` để chọn index
+đang hoạt động:
 
 ```bash
 python scripts/benchmark_camera.py --camera-index 1 --duration-seconds 60 \
@@ -84,24 +88,32 @@ python scripts/benchmark_camera.py --camera-index 1 --interactive-scenarios \
   --output outputs/private/camera_interactive.json
 ```
 
-Cửa sổ hiển thị từng hành vi và chờ Space trước khi tính pha; `s` bỏ qua pha giảm
-sáng tùy chọn, `q` dừng. Đây là spot-check có điều khiển theo cue, không có nhãn
-độc lập; không dùng để tính accuracy/F1. Chỉ số pha là số tổng hợp, không giữ
-frame, ảnh, đặc trưng hay timestamp từng frame.
+Cửa sổ chờ Space trước mỗi tình huống; người tham gia làm theo dải cue riêng dưới
+HUD. Mỗi tình huống tách transition, hold, recovery theo offset từ Space; JSON lưu
+frame đầu/cuối, timestamp nguồn đầu/cuối và khoảng offset quan sát của mỗi
+subphase. `s` bỏ qua pha giảm sáng tùy chọn, `q` dừng. Đây là spot-check theo cue,
+không có nhãn độc lập; không dùng tính accuracy/F1. Chỉ lưu aggregate trong
+`outputs/private/`, không lưu frame, ảnh, đặc trưng, timestamp từng frame hay video.
 
 ## Định nghĩa metric
 
 - **Confusion matrix:** frame trong đoạn nhãn được gán trạng thái thật theo thời
   gian video. Trạng thái thật `UNKNOWN` được đếm riêng; ma trận phân loại gồm ba
   lớp thật đã biết và bốn cột dự đoán kể cả dự đoán `UNKNOWN`.
-- **Precision/recall/F1:** tính riêng `EYES_CLOSED` và `DISTRACTED`; không có mẫu
-  số thì trả `N/A`, không quy thành 0 hay 100%.
-- **Coverage:** tỷ lệ frame có ground truth đã biết mà mô hình cũng không trả
-  `UNKNOWN`. Frame ground truth `UNKNOWN` được thống kê riêng và không làm đổi mẫu
-  số coverage.
-- **False alarms/minute NORMAL:** số lần trạng thái cảnh báo bắt đầu trong frame
-  được gắn nhãn `NORMAL`, chia thời lượng NORMAL được quan sát (phút). Nếu không có
-  thời lượng NORMAL thì `N/A`.
+- **Precision/recall/F1:** tính từng lớp ground truth đã biết (`NORMAL`,
+  `EYES_CLOSED`, `DISTRACTED`); `UNKNOWN` là trạng thái abstention, không được gộp
+  như lớp cảnh báo. Không có mẫu số thì trả `N/A`, không quy thành 0 hay 100%.
+- **Accuracy all-known:** đúng / toàn bộ frame ground truth đã biết; dự đoán
+  `UNKNOWN` tính là không đúng.
+- **Accuracy when covered:** đúng / frame ground truth đã biết mà prediction không
+  `UNKNOWN`; luôn đọc cùng coverage và abstention rate.
+- **Coverage/abstention:** coverage là tỷ lệ frame ground truth đã biết có dự đoán
+  khác `UNKNOWN`; abstention rate trên known labels là phần bù coverage. Báo thêm
+  tỷ lệ `UNKNOWN` trên mọi frame được gắn nhãn và số frame ground truth `UNKNOWN`.
+- **False alarms/minute NORMAL:** số lần trạng thái cảnh báo bắt đầu bên trong mỗi
+  đoạn `NORMAL` được gắn nhãn, chia tổng thời lượng NORMAL được quan sát (phút).
+  Trạng thái trước một đoạn không nối onset vào đoạn kế tiếp. Nếu không có thời
+  lượng NORMAL thì `N/A`.
 - **Event onset delay:** với từng segment nhắm mắt/quay đầu, lấy thời gian nguồn
   đến dự đoán cùng lớp đầu tiên trừ thời điểm bắt đầu segment. Segment không phát
   hiện được tính vào số sự kiện bỏ lỡ. Đây là delay trong clip, không dùng đồng hồ
@@ -136,7 +148,9 @@ frame, ảnh, đặc trưng hay timestamp từng frame.
 
 Lưu riêng clip, CSV nhãn, CSV dự đoán, JSON đánh giá, config, model SHA-256 và môi
 trường. Đọc lại các timestamp ở mép segment vì khoảng nhãn kết thúc là exclusive.
-Đừng tuning trên cùng clip rồi trình bày như tập test độc lập.
+Đừng tuning trên cùng clip rồi trình bày như tập test độc lập. Báo cáo CP13 live
+không có independent labels; mọi accuracy, precision/recall/F1, false alarms/phút
+và event-to-warning latency phải để `N/A` cho đến khi có nhãn độc lập.
 
 Ngưỡng `ear_closed=0.21`, `yaw=30°` là giá trị khởi tạo thử nghiệm. Một người và
 một webcam không đại diện khác biệt về kính, ánh sáng, da, camera, vị trí lắp, rung

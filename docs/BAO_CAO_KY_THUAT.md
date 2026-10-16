@@ -39,12 +39,18 @@ ghép thành vector số học nếu thiếu dữ liệu. `UNKNOWN` có ưu tiê
 nhiều mặt, landmark lỗi, PnP không đạt residual hoặc timestamp/gap lỗi. Pipeline
 không dùng trạng thái cảnh báo cũ để suy luận qua frame không hợp lệ.
 
+FSM khởi tạo EMA từ sample hợp lệ đầu tiên; sample này chưa phát warning và không
+được lưu làm tư thế neutral. Nếu yaw đầu tiên đã vượt ngưỡng, nó bắt đầu dwell; sau
+1,0 giây liên tục mới phát `DISTRACTED`. Frame không hợp lệ chuyển `UNKNOWN` và
+xóa dwell/EMA; khoảng thời gian lớn hơn `max_gap_s` cũng trả `UNKNOWN` rồi khởi
+động lại. Test xác nhận startup pose không trở thành neutral calibration.
+
 ## Trụ cột kiến thức đã thể hiện
 
 | Trụ cột | Vị trí và lựa chọn | Bằng chứng / giới hạn |
 |---|---|---|
 | Học | Dùng MediaPipe Face Landmarker pretrained; không fine-tune để giữ prototype nhẹ trên CPU. | `models/README.md`, model tải từ nguồn chính thức và checksum lưu trong log; không đo accuracy model riêng. |
-| Hình học | EAR hai mắt và PnP từ sáu điểm mặt. | `src/vinfast_dms/geometry.py`, test bất biến và góc dựng sẵn; camera matrix và 3D mặt là heuristic chưa hiệu chuẩn. |
+| Hình học | EAR hai mắt và PnP từ sáu điểm canonical của MediaPipe. | `src/vinfast_dms/geometry.py`, test correspondence, basis, residual và dấu góc. 3D canonical đúng topology; camera matrix vẫn heuristic, chưa hiệu chuẩn vật lý. |
 | Bất định | Quality gates, lý do lỗi cụ thể, `UNKNOWN` thay vì `NORMAL`. | `src/vinfast_dms/uncertainty.py`, `tests/test_uncertainty.py`; chưa đo coverage thật. |
 | Thời gian | EMA có alpha phụ thuộc `dt`, hysteresis, dwell-time theo giây và reset khi gap. | `src/vinfast_dms/temporal.py`, test nhiều FPS và timestamp không đều; chưa đo trên webcam. |
 | Dữ liệu và bằng chứng | CSV tùy chọn, replay, nhãn thủ công và batch benchmark. | `src/vinfast_dms/metrics.py`, `scripts/`; chưa có clip và kết quả thực nghiệm. |
@@ -58,17 +64,25 @@ khởi tạo `30°`; dwell nhắm mắt `1.2 s`, quay đầu `1.0 s`. Đây là 
 trong `config/default.yaml`, chưa được hiệu chỉnh từ người dùng hoặc đánh giá độc
 lập.
 
-Pose dùng `cv2.solvePnP` trên mốc mũi, cằm, khóe mắt và khóe miệng. Tọa độ 3D có
-quy mô tùy ý; ma trận nội tại ban đầu đặt tiêu cự bằng chiều rộng ảnh và méo bằng
-không. Vì vậy yaw/pitch chỉ là ước lượng phục vụ demo, không phải góc chính xác,
-tọa độ mét hay hướng nhìn (gaze). Hệ thống chưa tính PERCLOS chuẩn lâm sàng, ngáp,
-hay chẩn đoán buồn ngủ.
+Pose dùng `cv2.solvePnP` với correspondence có thứ tự `(1, 152, 33, 263, 61, 291)`
+giữa mũi, cằm, khóe mắt và khóe miệng. Sáu điểm 3D lấy từ
+[MediaPipe canonical face model](https://github.com/google-ai-edge/mediapipe/blob/master/mediapipe/modules/face_geometry/data/canonical_face_model.obj);
+trục canonical được đổi `(x,y,z) → (x,−y,−z)` để đưa +Y/+Z sang quy ước camera
+OpenCV. Yaw output đổi dấu về quy ước semantic, dương là quay mũi về phía trái của
+chủ thể. PnP dùng `SOLVEPNP_ITERATIVE`; residual là RMS khoảng cách Euclid 2D trên
+sáu điểm. Gate giữ ở 12 px.
+
+Camera mặc định giả định `fx=fy=width`, principal point tại tâm ảnh, méo bằng
+không; chưa có intrinsic calibration bằng checkerboard. Tọa độ canonical theo
+đơn vị của model, không phải số đo cá nhân hay vị trí thực trong xe. Do đó yaw và
+pitch là ước lượng demo, không phải góc đã hiệu chuẩn, gaze hoặc hệ trục mét.
+Không tính PERCLOS chuẩn lâm sàng, ngáp hoặc chẩn đoán buồn ngủ.
 
 ## Dữ liệu, quyền riêng tư và an toàn
 
 Chưa có dataset video người thật được lưu với consent, nhãn thủ công hoặc media
-công khai. Trong CP12, tác giả trực tiếp làm người tham gia cho webcam spot-check
-theo cue; chỉ số tổng hợp không được xem là nhãn độc lập. Unit test dùng
+công khai. Trong CP12–CP13, tác giả trực tiếp làm người tham gia cho webcam
+spot-check theo cue; chỉ số tổng hợp không được xem là nhãn độc lập. Unit test dùng
 mảng/landmark/video tổng hợp và chỉ xác nhận hợp đồng kỹ thuật. Ảnh/video không ghi
 theo mặc định. CSV chỉ ghi khi bật `--log-csv`; video chỉ ghi khi bật
 `--record-output`. `data/private/` và `outputs/private/` bị loại khỏi Git; model
@@ -82,22 +96,29 @@ toàn của tài xế.
 
 ## Số đo và bằng chứng hiện có
 
-CP12 đã chạy benchmark 60 giây trên webcam index 1: nguồn 29,94 FPS, throughput
-headless 29,94 FPS, pipeline processing capacity 121,66 FPS, latency pipeline
-mean/p50/p95 là 8,22/8,64/10,90 ms, và 80,08% frame pipeline-valid. Một lượt
-spot-check tương tác ghi nhận hành vi dự đoán theo cue, nhưng không lưu media hoặc
-nhãn độc lập; một tín hiệu false-warning không tái hiện được. Các số này mô tả
-thiết bị/phiên cụ thể, không phải accuracy, false-alarm rate có nhãn hay event
-delay. Kết quả kiểm thử cuối và phương pháp xem tại [kết quả thực nghiệm](KET_QUA_THUC_NGHIEM.md)
-và [phương pháp](PHUONG_PHAP_DANH_GIA.md).
+CP12 benchmark 60 giây trên webcam index 1 đạt source/throughput headless 29,94 FPS,
+pipeline capacity 121,66 FPS, latency mean/p50/p95 8,22/8,64/10,90 ms và
+pipeline-valid 80,08%. CP13 đã đổi basis: pha nhìn thẳng 180/180 valid, 0 warning,
+latency p50/p95 6,60/7,16 ms, reprojection median/p95 4,65/4,97 px. Pha quay lớn
+vẫn mất một phần quan sát qua `no_face` hoặc residual cao. Các phiên cue đo
+coverage và trạng thái quan sát, không có ground truth độc lập nên không báo
+accuracy, false-alarm rate có nhãn hoặc event delay. Kết quả chi tiết ở
+[kết quả thực nghiệm](KET_QUA_THUC_NGHIEM.md) và [phương pháp](PHUONG_PHAP_DANH_GIA.md).
+
+Neutral yaw CP13 sau sửa có median +0,16°, p05–p95 −0,74°…+1,48°, thấp hơn nhiều
+so với ngưỡng 30°. Không có evidence phiên này cần baseline neutral; calibration
+tự động có thể che một tư thế quay đầu lúc khởi động. Vì vậy không thêm session
+calibration cho bản này. Calibration người dùng chủ động chỉ nên xem xét nếu tập
+dữ liệu có nhãn sau này chứng minh offset ổn định và lợi ích.
 
 ## Ca lỗi và giới hạn
 
-Spot-check ghi nhận một bất thường ứng viên ở pha nhìn thẳng nhưng lượt lặp không
-tái hiện; pha quay trái có coverage thấp và `high_reprojection_error` nhưng chưa
-có mốc sự kiện đủ để khẳng định missed event. Chưa có ca lỗi với root cause được
-xác nhận. Kịch bản che mặt/mất track trả `UNKNOWN` là stress test, không phải lỗi
-khi đó là trạng thái đúng. Quy trình tương lai được ghi ở
+CP13 tái hiện lỗi quy ước basis PnP bằng pitch nhìn thẳng −175,03°; đổi basis làm
+pitch live thành +13,39° và synthetic neutral pitch gần 0°. Đó là ca lỗi hình học
+đã có root cause/mitigation và phép đo lại. Góc lớn vẫn có `UNKNOWN`; riêng pha
+quay phải còn warning trong recovery, chưa rõ do timing cue, pose outlier hay EMA.
+Kịch bản che mặt/mất track trả `UNKNOWN` là hành vi bảo vệ khi không đủ quan sát,
+không tự nó là lỗi phân loại. Quy trình tương lai được ghi ở
 [phân tích ca lỗi](PHAN_TICH_CA_LOI.md). Tập hiện tại chưa cho phép ước lượng thiên
 lệch do kính, ánh sáng, da, camera, khẩu trang, rung xe, góc lắp đặt hoặc khác biệt
 giữa người dùng.
@@ -121,7 +142,7 @@ API Face Landmarker tham chiếu [tài liệu MediaPipe Tasks](https://ai.google
 | Demo chạy được | 25 | 10 | Webcam và overlay chạy; chưa có clip consent dự phòng và chưa đánh giá nhận diện độc lập. |
 | Độ hữu ích | 15 | 8 | Nhóm người dùng và vấn đề được nêu; chưa xác nhận nhu cầu với VinFast/đội xe. |
 | Impact | 15 | 8 | Có phép tính giả định kèm rủi ro; chưa có đầu vào hoặc tác động thực tế. |
-| Bằng chứng | 10 | 3 | 105 test kỹ thuật có thể chạy lại và webcam benchmark; thiếu nhãn độc lập và ca lỗi xác nhận. |
+| Bằng chứng | 10 | 3 | Có synthetic geometry, webcam benchmark và ca basis PnP trước/sau; vẫn thiếu nhãn độc lập, accuracy và event latency. |
 | Trình bày và hỏi đáp | 10 | 5 | Có kịch bản và câu hỏi; chưa diễn tập/đánh giá, tiêu chí upstream giả định team. |
 | **Tổng tự chấm sơ bộ** | **100** | **54** | Không phải điểm do ban tổ chức xác nhận. |
 

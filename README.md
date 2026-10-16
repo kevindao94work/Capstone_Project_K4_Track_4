@@ -31,17 +31,23 @@ cục bộ, không theo dõi bằng Git. Kiểm tra môi trường bằng
 Chạy webcam hoặc video:
 
 ```bash
-python -m vinfast_dms --source camera
+python -m vinfast_dms --source camera --camera-index 0
 python -m vinfast_dms --source data/private/consented_demo.mp4 --headless
 ```
 
-Trên MacBook Pro M4 này, mặc định `--camera-index 1` là webcam tích hợp; OpenCV
-dùng backend AVFoundation. Có thể chọn camera khác bằng `--camera-index N`. Thêm
-`--max-frames 100` để giới hạn lượt chạy. CP12 đã đọc 30 frame thật từ index 1,
+OpenCV dùng backend AVFoundation; chọn thiết bị bằng `--camera-index N`. CP13 đã
+dùng camera tích hợp ở index 1 trong các phiên cue; ở lượt CLI cuối macOS ánh xạ
+duy nhất “MacBook Pro Camera” sang index 0. Chỉ số camera có thể đổi khi danh sách
+thiết bị thay đổi. Chạy `python scripts/check_camera.py --camera-index N --frames 30`
+trước buổi demo. `DEFAULT_CAMERA_INDEX` giữ giá trị 1 theo cấu hình đã xác nhận
+ban đầu. Thêm `--max-frames 100` để giới hạn lượt chạy. CP12 đã đọc 30 frame thật từ index 1,
 chạy DMS trên 120 frame headless và 120 frame có cửa sổ, đồng thời hoàn tất lượt
 kiểm tra tương tác từng tình huống. Camera mở bằng AVFoundation và đã xử lý frame
 thật; kết quả theo tình huống, giới hạn và số đo được ghi tại
-[kết quả thực nghiệm](docs/KET_QUA_THUC_NGHIEM.md). Script kiểm tra nhanh chỉ chạy
+[kết quả thực nghiệm](docs/KET_QUA_THUC_NGHIEM.md). CP13 đã thay sáu điểm 3D PnP
+bằng đúng đỉnh canonical MediaPipe, đổi basis sang OpenCV camera frame và kiểm tra
+lại dấu yaw trên webcam. Ma trận nội tại vẫn là heuristic, chưa hiệu chuẩn vật lý.
+Script kiểm tra nhanh chỉ chạy
 khi tác giả chủ động gọi `python scripts/check_camera.py`; quyền webcam do macOS
 quản lý tại **System Settings → Privacy & Security → Camera**.
 
@@ -60,9 +66,17 @@ Ghi video overlay chỉ khi chủ động bật `--record-output`; mặc định
 `python scripts/replay.py --source data/private/consented_demo.mp4`.
 
 Để chạy từng tình huống tương tác (cửa sổ chờ Space trước mỗi pha; `s` bỏ qua
-giảm sáng tùy chọn, `q` dừng), dùng `python scripts/benchmark_camera.py
---camera-index 1 --interactive-scenarios --output outputs/private/camera_interactive.json`.
-Báo cáo chỉ giữ số liệu tổng hợp, không lưu ảnh, frame, đặc trưng hay video.
+giảm sáng tùy chọn, `q` dừng), dùng:
+
+```bash
+python scripts/benchmark_camera.py --camera-index 1 --interactive-scenarios \
+  --output outputs/private/camera_interactive.json
+```
+
+Space bắt đầu từng tình huống. Làm theo các cue PHA (transition/hold/recovery);
+cue nằm trong dải riêng phía dưới khung hình để không đè lên HUD. Báo cáo lưu ranh
+giới frame của từng pha và số liệu tổng hợp, không lưu ảnh, frame, đặc trưng, log
+từng frame hay video. Cue là giả thuyết thao tác, không phải ground truth.
 
 Ví dụ chạy headless kèm log riêng tư:
 
@@ -85,7 +99,7 @@ ruff check .
 Đề bài upstream mô tả capstone Track 4, demo tối đa 10 phút, ít
 nhất hai trụ cột, một số đo, một ca lỗi và dữ liệu an toàn. Upstream giới thiệu
 bảy trụ cột và sáu tiêu chí chấm trên 100 điểm. Hướng dẫn triển khai này mở rộng
-phạm vi thành CP0–CP12 và khuyến nghị sáu trụ cột. Điều kiện làm cá nhân được ghi
+phạm vi thành CP0–CP13 và khuyến nghị sáu trụ cột. Điều kiện làm cá nhân được ghi
 minh bạch như chưa chứng minh tuân thủ yêu cầu đội; quyết định thuộc ban tổ chức.
 
 ## Tài liệu

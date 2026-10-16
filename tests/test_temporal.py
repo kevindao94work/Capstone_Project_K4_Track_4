@@ -101,6 +101,20 @@ def test_long_yaw_has_distinct_distracted_state() -> None:
     assert output.warning
 
 
+def test_first_valid_turned_pose_is_not_used_as_neutral_calibration() -> None:
+    machine = TemporalStateMachine(ThresholdConfig())
+    first = machine.update(_sample(0.0, yaw=40.0))
+    assert first.state == DMSState.NORMAL
+    assert first.candidate_state == DMSState.DISTRACTED
+    assert first.yaw_ema_deg == pytest.approx(40.0)
+    assert first.distracted_duration_s == 0.0
+    output = first
+    for index in range(1, 11):
+        output = machine.update(_sample(index / 10, yaw=40.0))
+    assert output.state == DMSState.DISTRACTED
+    assert output.distracted_duration_s >= 1.0
+
+
 def test_short_yaw_excursion_does_not_trigger() -> None:
     machine = TemporalStateMachine(ThresholdConfig())
     machine.update(_sample(0.0, yaw=0.0))

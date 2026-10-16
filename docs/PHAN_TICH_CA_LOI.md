@@ -2,16 +2,59 @@
 
 **Tác giả:** Đào Gia Bảo — **MSSV:** 2A202602793.
 
+## CP13.5 — lỗi quy ước basis PnP đã tái hiện và sửa
+
+**Điều kiện tái hiện:** webcam tích hợp MacBook Pro M4, index 1, AVFoundation,
+640×480; sáu correspondence canonical MediaPipe; chỉ giữ thống kê aggregate.
+Trong lượt nhìn thẳng trước sửa basis, 180/180 pose hợp lệ nhưng pitch median là
+−175,03° trong khi yaw median gần 0° (+0,63°), residual median 3,86 px. Điều này
+cho thấy `solvePnP` tìm được projection khớp nhưng góc được diễn giải trong basis
+không cùng chiều với camera.
+
+**Root cause được xác nhận:** model canonical dùng +Y lên và +Z hướng ra phía mũi;
+OpenCV camera dùng +Y xuống và +Z hướng rời camera. Đưa nguyên tọa độ model thẳng
+vào PnP làm tư thế nhìn thẳng biểu diễn gần một nửa vòng quay quanh X. Mảng 3D hiện
+được đổi bằng phép quay 180° quanh X `(x, y, z) → (x, −y, −z)`; dấu yaw được đổi về
+quy ước semantic (+ quay về phía trái của chủ thể). Thay đổi được kiểm tra bằng
+pose dựng sẵn, residual gần 0, pitch trung tính gần 0 và hai hướng yaw. Ngưỡng
+reprojection **không đổi**, vẫn 12 px.
+
+**Lặp lại trên webcam:** sau sửa, pha nhìn thẳng cho pitch median +13,39°, yaw
+median +0,16° (p05–p95: −0,74° đến +1,48°), residual median/p95 4,65/4,97 px;
+180/180 frame `NORMAL`, không warning. Trong hold quay trái, yaw median +39,81°;
+quay phải −36,28°. Dấu phù hợp với quy ước cue đã dùng. Một lượt ngắn sau đó giữ
+chớp mắt 180/180 frame `NORMAL` và nhận `EYES_CLOSED` trong 33/60 frame hold nhắm
+mắt; recovery trở lại `NORMAL` 120/120 frame. Đây là đối chiếu trước/sau có số đo
+thật, nhưng không có nhãn sự kiện độc lập và không chứng minh accuracy.
+
+**Giới hạn còn lại:** quay trái có 9/60 frame hold `UNKNOWN` do residual vượt gate;
+reprojection p95 trên cả hold là 1.201 px vì một outlier 1.203 px. Quay phải có
+20/59 frame hold `no_face`; 39 frame còn pose, yaw median −36,28°. Quality gate
+đang từ chối residual lớn thay vì buộc thành `NORMAL`. Trong recovery sau quay phải,
+52/120 frame vẫn `DISTRACTED`, dù yaw median pha là +4,10° và p05 −36,93°. Chỉ
+aggregate không phân biệt được người tham gia còn quay ở đầu recovery, outlier pose
+hay thời gian EMA/hysteresis; không tuyên bố đã sửa độ trễ hồi phục. Đây là giới
+hạn gần nhất còn được xác minh của CP13.
+
+Ở cùng lượt, hold quay trái có yaw median +39,81° nhưng 51 frame valid đều ở
+`NORMAL`; hold quay phải chỉ có 8/39 frame valid là `DISTRACTED`. Đây là đầu ra
+đáng điều tra vì ngưỡng yaw cấu hình là 30°, nhưng không có chuỗi yaw/EMA/dwell từng
+frame để biết các sample trên ngưỡng có liên tục đủ 1,0 giây hay bị ngắt bởi
+quality reset. Vì vậy không hạ dwell, đổi ngưỡng hoặc gọi là false negative đã
+xác nhận từ aggregate cue.
+
+Tài liệu hình học tham chiếu [MediaPipe canonical face model](https://github.com/google-ai-edge/mediapipe/blob/master/mediapipe/modules/face_geometry/data/canonical_face_model.obj),
+[MediaPipe Face Geometry](https://github.com/google-ai-edge/mediapipe/blob/master/docs/solutions/face_mesh.md)
+và [OpenCV solvePnP](https://docs.opencv.org/4.10.0/d5/d1f/calib3d_solvePnP.html).
+
 ## Trạng thái bằng chứng
 
-**NOT DEMONSTRATED ở mức ca lỗi có root cause đã xác nhận.** CP12 đã có spot-check
-trực tiếp trên người tham gia với cue được bắt đầu thủ công; người tham gia xác
-nhận đã thực hiện từng hành vi sau cue và chờ hết pha. Tuy nhiên, lượt này không có
-nhãn độc lập theo timestamp, không giữ frame/đặc trưng và chưa tái hiện ổn định một
-lỗi. Bằng chứng ứng viên dưới đây được ghi riêng, không trình bày như kết luận
-false positive/negative đã được chứng minh.
+CP13 đã tái hiện và sửa **lỗi hình học quy ước basis** ở trên bằng phép đo trước/sau
+và synthetic test. Các cue live không có nhãn độc lập theo timestamp, nên những
+trạng thái theo hành vi không được dùng để kết luận phân loại sai hoặc đúng. CP12
+được giữ lại dưới đây làm lịch sử và đối chứng có giới hạn.
 
-## Tín hiệu ứng viên trong spot-check CP12
+## Tín hiệu ứng viên trong spot-check CP12 (lịch sử)
 
 - **Thiết lập:** camera tích hợp MacBook Pro M4, index 1, AVFoundation, 640×480;
   MediaPipe Face Landmarker và cấu hình mặc định. Cửa sổ hiển thị overlay/cue;
@@ -71,8 +114,8 @@ kiểm tra việc `UNKNOWN` có an toàn hay không trước khi xem đó là l�
 Chỉ gọi một tình huống là ca lỗi khi log và nhãn độc lập chứng minh hệ thống đưa ra
 trạng thái sai hoặc bỏ lỡ một sự kiện cần phát hiện.
 
-**Kết luận hiện tại:** có bất thường ứng viên được quan sát trong pha nhìn thẳng,
-nhưng không tái hiện; có tín hiệu quality-gate coverage thấp ở pha quay trái nhưng
-chưa có mốc hành vi/dự đoán tường minh. Ca lỗi thật với ground truth độc lập,
-root cause được xác định và mitigation được kiểm chứng vẫn **NOT DEMONSTRATED**;
-CP8 chưa đạt.
+**Kết luận:** lỗi basis hình học CP13 có root cause và mitigation đã được đo lại;
+coverage thấp ở góc quay lớn và warning còn tiếp diễn vào recovery vẫn là giới hạn
+chưa được khắc phục. CP12 false warning nhìn thẳng không tái hiện ở CP13. Không có
+ground truth độc lập để kết luận accuracy hoặc event latency, nhưng CP13 đã đáp ứng
+ca lỗi kỹ thuật có số đo trước/sau.

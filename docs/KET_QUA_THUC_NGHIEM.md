@@ -2,7 +2,71 @@
 
 **Tác giả:** Đào Gia Bảo — **MSSV:** 2A202602793.
 
-## Dữ liệu thực đã đo
+## Bổ sung CP13 — hình học PnP và webcam có cue theo pha
+
+### Phiên đo đầy đủ trước khi sửa basis trục
+
+Camera MacBook index 1 / AVFoundation, 640×480; 2.237 lần đọc, 0 lỗi; 1.492 frame
+được tính trong các pha. Phiên kéo dài 77,10 giây gồm thời gian chờ Space. Cue
+được chia thành transition, hold và recovery; người tham gia bắt đầu pha bằng
+Space. Đây là đầu ra quan sát theo cue, không phải nhãn độc lập. Lượt này dùng sáu
+điểm canonical MediaPipe nhưng trước khi sửa phép đổi basis trục ở CP13.1; yaw/pitch
+không dùng làm kết quả cuối.
+
+| Tình huống | Frame / pipeline-valid | Trạng thái và quan sát chính |
+|---|---:|---|
+| Nhìn thẳng | 180 / 180 | `NORMAL` 180; 0 warning; reprojection median 3,86 px, p95 4,08 px; yaw median +0,63°, p05 −0,16°, p95 +1,34°; pitch median −175,03°. |
+| Chớp mắt | 179 / 179 | `NORMAL` 179; 0 warning. |
+| Nhắm mắt | 210 / 210 | Hold 60 frame: `EYES_CLOSED` 34, `NORMAL` 26; recovery 120 frame đều `NORMAL`. |
+| Quay trái | 210 / 170 | Hold chỉ 26/60 valid; `UNKNOWN` 34 do `face_too_small` 21 và `no_face` 13; không có warning. |
+| Quay phải | 208 / 141 | Hold 7/60 valid; 53 frame `no_face`; toàn pha `UNKNOWN` 67. |
+| Ra khỏi khung | 175 / 80 | Hold 0/59 valid; `no_face` 59. |
+| Che mắt | 180 / 128 | Hold 15/60 valid, 45 `UNKNOWN`; có một residual bị quality gate loại. |
+| Giảm sáng | 0 / 0 | Người tham gia bỏ qua pha tùy chọn. |
+| Phục hồi | 150 / 150 | `NORMAL` 150; 0 warning. |
+
+Pitch gần ±180° khi nhìn thẳng là dấu hiệu convention trục sai dù residual thấp.
+Phiên này dùng để chẩn đoán và không được gộp vào kết quả sau sửa. Báo cáo tổng hợp
+cục bộ `outputs/private/camera_interactive_cp13_before_axis_fix.json`; không lưu
+ảnh, video, đặc trưng hay dòng dữ liệu từng frame.
+
+### Lặp lại sau khi đổi basis MediaPipe sang OpenCV
+
+Trong code, sáu đỉnh canonical được biến đổi `(x, y, z) → (x, −y, −z)` trước
+`solvePnP`; kết quả yaw đổi dấu về quy ước semantic đã công bố. Ngưỡng residual
+vẫn **12 px**. Phiên đo sau sửa dùng cùng camera/model và 640×480:
+
+| Pha sau sửa | Frame / valid | Kết quả quan sát |
+|---|---:|---|
+| Nhìn thẳng 6 s | 180 / 180 | `NORMAL` 180, 0 warning; reprojection median 4,65 px, p95 4,97 px; yaw median +0,16°, p05 −0,74°, p95 +1,48°; pitch median +13,39°. |
+| Quay trái — hold 2 s | 60 / 51 | `NORMAL` 51, `UNKNOWN` 9 (`high_reprojection_error`), 0 warning; yaw median +39,81°; residual median 5,01 px, p95 1.201,05 px do outlier, max 1.203,02 px. |
+| Quay phải — hold | 59 / 39 | `DISTRACTED` 8, `NORMAL` 31, `UNKNOWN` 20 (`no_face`); yaw median −36,28°, p05 −38,09°, p95 −35,37°; residual median 6,20 px, max 6,78 px trên pose có được. |
+| Sau quay phải — recovery 4 s | 120 / 120 | `DISTRACTED` 52, `NORMAL` 68; yaw median +4,10°, p05 −36,93°, p95 +7,05°. Aggregate không cho biết chính xác thời điểm người tham gia quay về hay warning tắt. |
+| Phục hồi nhìn thẳng 5 s | 150 / 150 | `NORMAL` 150; yaw median +3,96°, p05 +2,90°, p95 +5,81°; 0 warning. |
+
+Một phiên ngắn sau cùng xác nhận nhánh mắt không suy giảm: chớp tự nhiên 180/180
+valid, tất cả `NORMAL`, 0 warning; nhắm mắt 210/210 valid, hold có 33/60
+`EYES_CLOSED`, recovery 120 frame `NORMAL`. Mỗi lượt có 0 lỗi đọc camera. Độ trễ
+pipeline p50/p95 ở pha nhìn thẳng là 6,60/7,16 ms. Đây không phải event latency.
+
+Trong các lượt interactive, index 1 mở thành công. Ở bài CLI 30 frame chạy sau
+cùng, index 1 báo ngoài phạm vi thiết bị `(0–0)`; `system_profiler` liệt kê duy
+nhất “MacBook Pro Camera”, và kiểm tra lại cùng webcam ở index 0 đọc 30 frame,
+DMS CLI xử lý đủ 30 frame với exit code 0. Đây là thay đổi ánh xạ thiết bị của
+AVFoundation trong phiên, không phải một camera ngoài khác. Trước demo nên kiểm tra
+index hiện tại; dự án giữ mặc định 1 theo cấu hình ban đầu nhưng cho phép truyền
+`--camera-index 0` khi macOS hiện thiết bị như ở lượt cuối.
+
+Neutral yaw ổn định quanh 0° và cách xa ngưỡng 30°; không có bằng chứng phiên này
+cần baseline neutral. Vì vậy chưa thêm calibration tự động hoặc session calibration.
+Nếu dữ liệu sau này cho thấy bias đáng kể, calibration phải do người dùng chủ động
+bắt đầu và không được tự lấy tư thế startup làm neutral.
+
+Không có ground truth độc lập; **không tính accuracy, precision/recall/F1, false
+alarms/phút hoặc event-to-warning latency** từ các cue. Các JSON CP13 nằm trong
+`outputs/private/` và không commit.
+
+## Dữ liệu thực đã đo tại CP12 (lịch sử)
 
 Đã chạy smoke test webcam, DMS live, benchmark 60 giây và một lượt kiểm tra tương
 tác từng pha trên camera index 1 / AVFoundation. Webcam và pipeline xử lý frame
@@ -28,7 +92,7 @@ không phải phép đo accuracy hay kết luận an toàn.
 | Camera-to-display latency | N/A | Benchmark headless, không đo thời điểm render. |
 | Event-to-warning latency | N/A | Chưa có sự kiện được gắn nhãn độc lập. |
 | So sánh baseline từng frame và temporal FSM | N/A | Chưa có dữ liệu chung để so sánh. |
-| Ca lỗi quan sát và tái hiện | NOT DEMONSTRATED | Có tín hiệu ứng viên cần tái kiểm tra ở pha nhìn thẳng/quay trái; chưa đủ căn cứ gán nhãn lỗi hoặc root cause. Xem [phân tích ca lỗi](PHAN_TICH_CA_LOI.md). |
+| Ca lỗi trong các phiên CP12 | Chưa xác nhận | Tín hiệu false warning nhìn thẳng không tái hiện; quality coverage quay trái thấp. CP13 root cause basis PnP được xác nhận riêng ở phần trên. |
 
 ### Kết quả spot-check tương tác
 
@@ -58,7 +122,7 @@ không lưu frame hoặc đặc trưng theo thời gian. File aggregate cục b�
 `outputs/private/camera_normal_repro_cp12.json` không được commit; không chứa
 frame, ảnh, đặc trưng hay timestamp từng frame.
 
-## Kiểm thử kỹ thuật đã chạy
+## Kiểm thử kỹ thuật CP12 / CP13
 
 CP12 kiểm định trong môi trường `.venv` Python 3.11.15: `.venv/bin/python -m
 pytest -q` → **105 passed**; `.venv/bin/ruff check .`, `compileall`, `pip check`,
@@ -67,6 +131,21 @@ pytest -q` → **105 passed**; `.venv/bin/ruff check .`, `compileall`, `pip chec
 qua `scripts/replay.py --runs 2 --max-frames 30` → hai chữ ký replay trùng nhau.
 Fixture nằm trong thư mục tạm và được xóa sau lượt chạy; đây là kiểm thử hồi quy,
 không phải dữ liệu nhận diện người.
+
+CP13 chạy lại toàn bộ `.venv/bin/python -m pytest -q` → **121 passed**;
+`.venv/bin/ruff check .`, `.venv/bin/python -m compileall -q src scripts tests`,
+`.venv/bin/python -m pip check`, `scripts/check_environment.py` và
+`scripts/validate_submission.py --allow-dirty --skip-sync` đều exit 0. Validator
+rà 58 file tracked, kiểm tra tài liệu/liên kết, private data, model, media và
+secret. Replay tạo AVI đen 30 frame trong thư mục tạm và chạy 2 lượt → chữ ký
+deterministic giống nhau; fixture được xóa sau khi chạy. Đây là kiểm tra pipeline,
+không phải bằng chứng nhận diện người.
+
+Workflow webcam CLI đã xử lý đủ 30 frame ở index 0 / AVFOUNDATION, 640×480,
+exit 0; trạng thái cuối `UNKNOWN` vì phiên smoke không có quan sát hợp lệ. Index 1
+trước đó đã chạy trong các phiên interactive, nhưng lần CLI smoke cuối báo index
+ngoài phạm vi khi AVFoundation chỉ còn một thiết bị. Dùng `check_camera.py` để xác
+nhận index trước khi demo.
 
 Tại CP8, `.venv/bin/python -m pytest -q` cho 90 passed. CP10 dựng venv Python 3.11
 mới, cài `pip install -e '.[dev]'`, rồi chạy `.venv/bin/python -m pytest -q` tương

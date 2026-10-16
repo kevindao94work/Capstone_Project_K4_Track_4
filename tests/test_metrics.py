@@ -63,6 +63,9 @@ def test_confusion_matrix_and_class_metrics_match_exact_fixture() -> None:
     assert result["abstention_rate_on_all_labeled_frames"] == pytest.approx(2 / 7)
     assert result["unknown_ground_truth_frames"] == 1
     assert result["unknown_prediction_frames"] == 2
+    assert result["per_class"]["NORMAL"]["precision"] == pytest.approx(2 / 3)
+    assert result["per_class"]["NORMAL"]["recall"] == 1.0
+    assert result["per_class"]["NORMAL"]["f1"] == pytest.approx(0.8)
     assert result["per_class"]["EYES_CLOSED"]["precision"] == 1.0
     assert result["per_class"]["EYES_CLOSED"]["recall"] == 0.5
     assert result["per_class"]["DISTRACTED"]["f1"] == pytest.approx(2 / 3)

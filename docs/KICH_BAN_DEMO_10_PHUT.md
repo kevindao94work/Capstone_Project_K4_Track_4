@@ -2,8 +2,8 @@
 
 **Người trình bày duy nhất:** Đào Gia Bảo — **MSSV:** 2A202602793.
 
-Kịch bản bám đúng 1 + 4 + 2 + 3 phút. CP12 đã xác minh webcam index 1 / AVFoundation,
-chạy DMS trên frame thật và hoàn tất spot-check có cue tương tác. Chưa có video
+Kịch bản bám đúng 1 + 4 + 2 + 3 phút. CP13 đã xác minh webcam index 1 / AVFoundation,
+đo cue có transition/hold/recovery và sửa basis PnP theo phép đo trước/sau. Chưa có video
 người thật được lưu với consent hoặc nhãn độc lập; kết quả nhận diện theo pha chỉ
 là quan sát một người, không phải metric accuracy. Không dùng fixture đen làm video
 demo nhận diện.
@@ -23,12 +23,14 @@ khi lái xe thật. Em sẽ chỉ kết luận điều gì có artifact kiểm c
 Sau khi đã cấp quyền Camera trong cài đặt macOS và tải model:
 
 ```bash
-python -m vinfast_dms --source camera --camera-index 1
+python -m vinfast_dms --source camera --camera-index 0
 ```
 
 Cho xem khung landmark, EAR hai mắt, yaw/pitch, hợp lệ, FPS/độ trễ và trạng thái
-tiếng Việt. Camera index 1 đã chạy trên máy này; kiểm tra quyền macOS nếu ứng dụng
-demo khác chưa được cấp quyền. Không giả làm webcam trực tiếp bằng video.
+tiếng Việt. CP13 đã dùng index 1 trong các phiên cue; bài CLI cuối macOS ánh xạ
+camera MacBook sang index 0 và DMS CLI chạy 30 frame tại index này. Trước buổi demo
+chạy `scripts/check_camera.py --camera-index N --frames 30`, rồi truyền index đang
+hoạt động. Không giả làm webcam trực tiếp bằng video.
 
 ### 1:40–2:20 — Nhìn thẳng và chớp mắt
 
@@ -68,15 +70,19 @@ Nếu không có video đã được phép, dành thời gian này để chỉ c
 
 ## 5:00–7:00 — Trụ cột, số đo, ca lỗi và impact
 
-- **Trụ cột:** pretrained Face Landmarker; hình học EAR/PnP; uncertainty với
-  `UNKNOWN`; thời gian với EMA/dwell; log/replay/evaluation. Nêu test file tương
-  ứng và giới hạn PnP chưa hiệu chuẩn.
-- **Số đo:** 105 test kỹ thuật pass ở CP12; webcam đã đo 29,94 FPS throughput headless,
-  p50/p95 pipeline latency 8,64/10,90 ms và valid pipeline 80,08% trong một lượt
-  60 giây. Đây là hiệu năng/coverage quan sát, không phải độ chính xác.
-- **Ca lỗi:** pha nhìn thẳng từng tạo 137 frame `DISTRACTED`, nhưng không tái hiện
-  ở lượt lặp; quay trái có nhiều frame `UNKNOWN` và `high_reprojection_error`.
-  Root cause lỗi thực vẫn chưa được xác nhận; xem `docs/PHAN_TICH_CA_LOI.md`.
+- **Trụ cột:** pretrained Face Landmarker; EAR/PnP; uncertainty với `UNKNOWN`;
+  EMA/dwell; log/replay/evaluation. Giải thích 3D canonical MediaPipe được đổi
+  `(x,y,z) → (x,−y,−z)` để khớp trục OpenCV. Ma trận nội tại vẫn heuristic.
+- **Số đo:** CP12 benchmark có throughput headless 29,94 FPS và processing
+  latency p50/p95 8,64/10,90 ms. CP13 sau sửa: pha nhìn thẳng 180/180 valid,
+  0 warning; pipeline latency p50/p95 6,60/7,16 ms. Quay trái hold 51/60 valid,
+  yaw median +39,81°; quay phải 39/59 valid, yaw median −36,28°. Đây là coverage
+  và hiệu năng spot-check, không phải accuracy.
+- **Ca lỗi:** CP13 đo pitch frontal −175,03° trước đổi basis; sau sửa +13,39°,
+  neutral yaw median +0,16° và dấu yaw hai hướng phù hợp cue. Ở quay góc lớn vẫn
+  có `high_reprojection_error`/`no_face`; sau quay phải còn 52/120 frame cảnh báo
+  trong recovery, chưa có log từng frame để kết luận nguyên nhân. Xem
+  `docs/PHAN_TICH_CA_LOI.md`.
 - **Impact giả định:** với giả định 1.000 xe, 1 phút/xe/ngày và giảm 10%, phép nhân
   cho ra 100 phút/ngày. Tất cả đầu vào giả định; con số không phải tác động được
   đo hoặc tuyên bố của VinFast.
@@ -88,12 +94,14 @@ Mỗi câu trả lời ngắn, gắn với code hoặc log; nếu chưa có bằ
 nhưng điều đó không thay thế điều kiện nhóm 3–5 người của đề upstream.
 
 Danh sách 12 câu gợi ý nằm trong [câu hỏi phản biện](CAU_HOI_PHAN_BIEN.md). Ưu
-tiên câu EAR, PnP, temporal, UNKNOWN, baseline, consent và giới hạn sử dụng.
+tiên câu EAR, PnP, hệ trục tọa độ, temporal, `UNKNOWN`, vì sao chưa cần
+calibration, consent và giới hạn sử dụng.
 
 ## Kiểm tra trước khi lên trình bày
 
-1. Chạy `python scripts/check_camera.py --camera-index 1 --frames 30`; sau đó mở
-   `python -m vinfast_dms --source camera --camera-index 1`.
+1. Chạy `python scripts/check_camera.py --camera-index 0 --frames 30`; sau đó mở
+   `python -m vinfast_dms --source camera --camera-index 0`. Dùng index 1 nếu
+   macOS liệt kê lại thiết bị ở index đó.
 2. Nếu có video, xác nhận consent, codec, đường dẫn và lệnh trước buổi demo.
 3. Kiểm tra model và môi trường bằng
    `scripts/check_environment.py`.
