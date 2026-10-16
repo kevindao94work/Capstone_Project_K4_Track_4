@@ -1,5 +1,7 @@
 # Ghi nhận checkpoint
 
+**Tác giả duy nhất:** Đào Gia Bảo — **MSSV:** 2A202602793.
+
 Các trạng thái dưới đây chỉ phản ánh lệnh và dữ liệu đã thực sự kiểm tra. Webcam,
 video người thật, metric thực nghiệm và tình trạng nộp VLearn không được suy diễn
 từ unit test.
@@ -235,6 +237,33 @@ từ unit test.
 - Phần chưa kiểm chứng: không có clip ID, thời điểm sự kiện thật, nhãn mong đợi,
   dự đoán lỗi, số đo liên quan hoặc root cause đã quan sát; chưa có regression test
   của lỗi đã sửa.
-- Commit/push: sẽ được ghi ở checkpoint tiếp theo sau khi commit/push CP8.
+- Commit/push: `570f75e914320aa594a2ce5453f15ee0593b1830`; đã push `main`, sau
+  `git fetch origin`, `HEAD` và `origin/main` cùng SHA.
 - Minh chứng: `docs/PHAN_TICH_CA_LOI.md`, `scripts/reproduce_failure.py`;
   không ghi hình hoặc tạo failure giả.
+
+### CP9 — Báo cáo, impact, kịch bản thuyết trình tiếng Việt
+
+- Thời điểm UTC: 2026-10-16 12:20 UTC.
+- Trạng thái: PASS cho tài liệu và kịch bản; số đo thực/ca lỗi vẫn thiếu và được
+  ghi N/A hoặc NOT DEMONSTRATED.
+- Đã thay đổi: `docs/BAO_CAO_KY_THUAT.md`, `docs/PHUONG_PHAP_DANH_GIA.md`,
+  `docs/KET_QUA_THUC_NGHIEM.md`, `docs/PHAN_TICH_CA_LOI.md`,
+  `docs/QUYEN_RIENG_TU_VA_GIOI_HAN.md`, `docs/KICH_BAN_DEMO_10_PHUT.md`,
+  `docs/CAU_HOI_PHAN_BIEN.md`, `docs/CHECKLIST_NOP_BAI.md`, README và tác giả
+  trong biên bản.
+- Lệnh đã chạy: `.venv/bin/python -m compileall -q src scripts tests` → exit 0;
+  `.venv/bin/ruff check .` → exit 0; `.venv/bin/python -m pytest -q` → 90 passed;
+  `.venv/bin/python -m pip check` → sạch; rà placeholder → không có kết quả; rà
+  liên kết Markdown tương đối → tất cả tồn tại; `git diff --check` → exit 0.
+- Điều kiện chấp nhận: kịch bản đúng 1+4+2+3 phút, gồm 12 câu hỏi; report có sáu
+  tiêu chí rubric chính thức, tự chấm sơ bộ 54/100 và căn cứ/thiếu; impact 100
+  phút/ngày được ghi rõ là giả định; kết quả thật được tách khỏi test kỹ thuật và
+  kịch bản giả định. Tất cả tài liệu ghi tác giả duy nhất và MSSV.
+- Phần chưa kiểm chứng: chưa diễn tập; chưa có webcam/video người thật, metric
+  thực hoặc failure thật; tự chấm không phải điểm giám khảo. Bài cá nhân chưa
+  chứng minh điều kiện nhóm và VLearn chưa nộp.
+- Commit/push: SHA sẽ được xác minh và ghi ở CP10; commit CP9 chưa tạo tại thời
+  điểm biên bản.
+- Minh chứng: tám tài liệu CP9 trong `docs/`, liên kết trong `README.md`; rà soát
+  README và tài liệu không tìm thấy placeholder.

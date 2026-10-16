@@ -74,5 +74,12 @@ minh bạch như chưa chứng minh tuân thủ yêu cầu đội; quyết đị
 - [Báo cáo kỹ thuật](docs/BAO_CAO_KY_THUAT.md)
 - [Phương pháp đánh giá](docs/PHUONG_PHAP_DANH_GIA.md)
 - [Kết quả thực nghiệm](docs/KET_QUA_THUC_NGHIEM.md)
+- [Phân tích ca lỗi](docs/PHAN_TICH_CA_LOI.md)
 - [Quyền riêng tư và giới hạn](docs/QUYEN_RIENG_TU_VA_GIOI_HAN.md)
+- [Kịch bản demo 10 phút](docs/KICH_BAN_DEMO_10_PHUT.md)
+- [Câu hỏi phản biện](docs/CAU_HOI_PHAN_BIEN.md)
+- [Biên bản checkpoint](docs/GHI_NHAN_CHECKPOINT.md)
 - [Checklist nộp bài](docs/CHECKLIST_NOP_BAI.md)
+
+Tài liệu API: [MediaPipe Face Landmarker Python](https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker/python).
+Nguồn đề và rubric: [K4 Track 4 Project Capstone](https://github.com/VinUni-AI20k/K4-Track4-ProjectCapstone).
