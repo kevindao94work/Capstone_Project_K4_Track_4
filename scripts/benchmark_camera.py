@@ -143,6 +143,24 @@ def _ascii_cue(value: str) -> str:
     return normalized.encode("ascii", errors="ignore").decode("ascii")
 
 
+def _draw_cue_banner(display: np.ndarray, cue: str) -> np.ndarray:
+    """Render the action cue in its own high-contrast strip below the status HUD."""
+    height, width = display.shape[:2]
+    top = max(0, height - 46)
+    cv2.rectangle(display, (0, top), (width - 1, height - 1), (14, 25, 38), -1)
+    cv2.putText(
+        display,
+        _ascii_cue(cue),
+        (14, max(18, height - 15)),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.48,
+        (255, 255, 255),
+        2,
+        cv2.LINE_AA,
+    )
+    return display
+
+
 def _new_measurement_stats() -> dict[str, object]:
     return {
         "frames": 0,
@@ -429,16 +447,7 @@ def run_interactive_scenario_check(args: argparse.Namespace) -> dict[str, object
                         0.0,
                         mirror=config.display.mirror,
                     )
-                    cv2.putText(
-                        display,
-                        _ascii_cue(prompt),
-                        (10, 25),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.48,
-                        (255, 255, 255),
-                        2,
-                        cv2.LINE_AA,
-                    )
+                    display = _draw_cue_banner(display, prompt)
                     cv2.imshow("VinFast DMS - Interactive check", display)
                     key = cv2.waitKey(1) & 0xFF
                 except cv2.error as exc:

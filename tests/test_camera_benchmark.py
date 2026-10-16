@@ -1,11 +1,13 @@
 from types import SimpleNamespace
 
+import numpy as np
 import pytest
 import scripts.benchmark_camera as benchmark_camera
 from scripts.benchmark_camera import (
     GUIDED_PHASES,
     INTERACTIVE_SCENARIOS,
     _ascii_cue,
+    _draw_cue_banner,
     _measurement_summary,
     _new_scenario_stats,
     _percentile,
@@ -44,6 +46,14 @@ def test_camera_benchmark_empty_percentile_is_not_available() -> None:
 
 def test_live_runner_cue_is_renderable_with_opencv_ascii_font() -> None:
     assert _ascii_cue("PHA nhắm mắt · giữ 2 giây") == "PHA nham mat | giu 2 giay"
+
+
+def test_live_runner_draws_cue_in_separate_bottom_banner() -> None:
+    image = np.zeros((100, 200, 3), dtype=np.uint8)
+    rendered = _draw_cue_banner(image.copy(), "READY: NORMAL | SPACE")
+    assert np.all(rendered[:53] == 0)
+    assert np.any(rendered[54:] > 0)
+    assert np.all(rendered[54, :, :] == [14, 25, 38])
 
 
 def test_interactive_scenarios_can_be_selected_for_reproduction() -> None:
