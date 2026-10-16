@@ -38,7 +38,9 @@ packaging==26.3
     #   matplotlib
     #   pytest
 pillow==12.3.0
-    # via matplotlib
+    # via
+    #   vinfast-dms (pyproject.toml)
+    #   matplotlib
 pluggy==1.7.0
     # via pytest
 pycparser==3.11

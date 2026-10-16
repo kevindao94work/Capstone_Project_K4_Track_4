@@ -16,6 +16,8 @@ def main() -> int:
     parser.add_argument("--width", type=int, default=640)
     parser.add_argument("--height", type=int, default=480)
     args = parser.parse_args()
+    if args.frames < 1:
+        parser.error("--frames phải lớn hơn 0.")
     try:
         with VideoSource(
             "camera", camera_index=args.camera_index, width=args.width, height=args.height

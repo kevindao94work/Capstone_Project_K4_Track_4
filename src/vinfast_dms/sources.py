@@ -52,6 +52,7 @@ class VideoSource(Iterator[FrameSample]):
         self.fps = 0.0
         self._frame_index = 0
         self._last_timestamp_s = -1.0
+        self._last_timestamp_ms = -1
         self._clock_origin_ns: int | None = None
         self.timestamp_fallback = False
 
@@ -114,16 +115,25 @@ class VideoSource(Iterator[FrameSample]):
                     self._clock_origin_ns = now_ns
                 self.timestamp_fallback = True
         if candidate_s <= self._last_timestamp_s:
-            if self.source_type == "video" and self.fps > 0.0:
-                candidate_s = self._frame_index / self.fps
+            if self.source_type == "video":
+                if self.fps > 0.0:
+                    candidate_s = self._frame_index / self.fps
+                else:
+                    if self._clock_origin_ns is None:
+                        self._clock_origin_ns = now_ns
+                    candidate_s = (now_ns - self._clock_origin_ns) / 1_000_000_000
                 self.timestamp_fallback = True
             candidate_s = max(candidate_s, self._last_timestamp_s + 0.001)
         self._last_timestamp_s = candidate_s
+        timestamp_ms = max(0, int(round(candidate_s * 1000.0)))
+        if timestamp_ms <= self._last_timestamp_ms:
+            timestamp_ms = self._last_timestamp_ms + 1
+        self._last_timestamp_ms = timestamp_ms
         sample = FrameSample(
             frame=frame,
             index=self._frame_index,
             timestamp_s=candidate_s,
-            timestamp_ms=max(0, int(round(candidate_s * 1000.0))),
+            timestamp_ms=timestamp_ms,
             source_type=self.source_type,
             source_name=self.source_name,
         )

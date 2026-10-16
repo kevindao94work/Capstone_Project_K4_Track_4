@@ -79,5 +79,31 @@ từ unit test.
 - Phần chưa kiểm chứng: 3D reference points là hình mặt quy mô tùy ý; không phải
   hệ tọa độ mét, intrinsics vẫn là heuristic và test không chứng minh góc chính
   xác trên camera thật.
-- Commit/push: SHA sẽ được đối chiếu sau commit CP2 và lưu ở CP3.
+- Commit/push: `aeb83e3d008a3553086eb7a05794f06c699006e4`; đã push `main`, sau
+  `git fetch origin`, `HEAD` và `origin/main` cùng SHA.
 - Minh chứng: `tests/test_geometry.py` (17 fixture tổng hợp, chỉ là test thuật toán).
+
+### CP3 — MVP temporal state machine và luồng headless
+
+- Thời điểm UTC: 2026-10-16 12:04 UTC.
+- Trạng thái: PASS cho unit/integration fixture; chưa có demo trên webcam hoặc
+  video người thật.
+- Đã thay đổi: `src/vinfast_dms/temporal.py`, `src/vinfast_dms/pipeline.py`,
+  `src/vinfast_dms/overlay.py`, `src/vinfast_dms/cli.py`, `src/vinfast_dms/__main__.py`,
+  cấu hình/lockfile có Pillow để vẽ tiếng Việt, các kiểm thử FSM/pipeline/overlay.
+- Lệnh đã chạy: `ruff check .` → 0 lỗi;
+  `python -m compileall -q src scripts tests` → 0;
+  `pytest -q` → 49 passed; `python -m pip check` → sạch.
+  CLI `python -m vinfast_dms --source <fixture-100-frames.avi> --headless --max-frames 100`
+  chạy với model thật trên clip fixture đen 640×480 có 100 khung hình → exit 0,
+  đã xử lý đủ 100, trạng thái cuối `KHÔNG XÁC ĐỊNH`.
+- Điều kiện chấp nhận: chớp mắt tổng hợp 0,15 giây không cảnh báo; nhắm mắt kéo
+  dài phát cảnh báo sau dwell theo thời gian ở 5/15/30/60 FPS và dãy timestamp
+  không đều; mất mặt trả `UNKNOWN` và xóa trạng thái cũ; CLI `--help` chạy không
+  mở camera; overlay có EAR/yaw/pitch/trạng thái/độ trễ.
+- Phần chưa kiểm chứng: clip 100 khung chỉ là fixture trống để kiểm thử độ bền,
+  không phải demo nhận diện hay benchmark hiệu năng; chưa mở cửa sổ tương tác hoặc
+  webcam do quyền Camera chưa được cấp.
+- Commit/push: SHA sẽ được ghi và đối chiếu ở CP4.
+- Minh chứng: `tests/test_temporal.py`, `tests/test_pipeline.py`,
+  `tests/test_overlay.py`, `tests/test_cli_smoke.py`.

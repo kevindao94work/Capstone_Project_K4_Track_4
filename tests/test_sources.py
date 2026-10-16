@@ -55,3 +55,31 @@ def test_camera_capture_is_released_on_exception(monkeypatch: pytest.MonkeyPatch
             raise RuntimeError("fixture")
     assert source.capture is None
     assert capture.released
+
+
+def test_video_millisecond_timestamps_stay_strict_with_repeated_positions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = tmp_path / "video.avi"
+    path.touch()
+
+    class FakeCapture:
+        def __init__(self) -> None:
+            self.frames = [np.zeros((8, 8, 3), dtype=np.uint8) for _ in range(3)]
+
+        def isOpened(self) -> bool:
+            return True
+
+        def get(self, prop: int) -> float:
+            return 10_000.0 if prop == cv2.CAP_PROP_FPS else 0.0
+
+        def read(self) -> tuple[bool, np.ndarray | None]:
+            return (True, self.frames.pop(0)) if self.frames else (False, None)
+
+        def release(self) -> None:
+            pass
+
+    monkeypatch.setattr(cv2, "VideoCapture", lambda *_: FakeCapture())
+    with VideoSource(str(path)) as source:
+        samples = list(source)
+    assert [sample.timestamp_ms for sample in samples] == [0, 1, 2]

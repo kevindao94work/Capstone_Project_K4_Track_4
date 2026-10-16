@@ -22,3 +22,15 @@ def test_camera_check_help_does_not_open_camera() -> None:
     )
     assert result.returncode == 0
     assert "--camera-index" in result.stdout
+
+
+def test_demo_cli_help_does_not_require_camera_or_model() -> None:
+    result = subprocess.run(
+        [sys.executable, "-m", "vinfast_dms", "--help"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0
+    assert "--source" in result.stdout
+    assert "--headless" in result.stdout
