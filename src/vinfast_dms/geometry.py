@@ -15,11 +15,11 @@ RIGHT_EYE_INDICES = (33, 160, 158, 133, 153, 144)
 LEFT_EYE_INDICES = (362, 385, 387, 263, 373, 380)
 
 # Sáu đỉnh cùng chỉ số trong canonical_face_model.obj của MediaPipe (468 đỉnh).
-# Thứ tự 2D/3D phải tương ứng tuyệt đối. Tọa độ dùng đơn vị canonical cm, không
-# phải kích thước đã hiệu chuẩn của người dùng hoặc camera.
+# Thứ tự 2D/3D phải tương ứng tuyệt đối. Tọa độ canonical dùng cm, không phải
+# kích thước đã hiệu chuẩn. MediaPipe model axes: +X subject-left, +Y up, +Z nose.
 # Nguồn: https://github.com/google-ai-edge/mediapipe/blob/master/mediapipe/modules/face_geometry/data/canonical_face_model.obj
 POSE_LANDMARK_INDICES = (1, 152, 33, 263, 61, 291)
-POSE_MODEL_POINTS = np.asarray(
+POSE_CANONICAL_MODEL_POINTS = np.asarray(
     [
         (0.0, -1.126865, 7.475604),  # 1: chóp mũi
         (0.0, -9.403378, 4.264492),  # 152: cằm
@@ -30,6 +30,9 @@ POSE_MODEL_POINTS = np.asarray(
     ],
     dtype=np.float64,
 )
+# OpenCV camera frame uses +X image-right, +Y down, +Z away from camera. Rotate the
+# canonical basis 180° about X: (x, y, z) -> (x, -y, -z).
+POSE_MODEL_POINTS = POSE_CANONICAL_MODEL_POINTS * np.asarray([1.0, -1.0, -1.0])
 
 
 @dataclass(frozen=True, slots=True)
@@ -107,12 +110,11 @@ def default_camera_matrix(width: int, height: int) -> np.ndarray:
 def rotation_matrix_to_euler(rotation: np.ndarray) -> tuple[float, float, float]:
     """Phân rã Z-Y-X; trả yaw, pitch, roll theo độ.
 
-    Quy ước trục object của canonical face: X chạy theo chiều ngang ảnh khi nhìn
-    thẳng, +Y lên trên, và +Z hướng từ mặt ra phía mũi/camera. Euler theo thứ tự
-    R = Rz(roll) @ Ry(yaw) @ Rx(pitch): yaw quanh Y, pitch quanh X, roll quanh Z.
-    Với frame camera không mirror, yaw dương quay mũi về phía trái của chủ thể
-    (phía phải ảnh); yaw âm quay mũi về phía phải của chủ thể. Chỉ mirror overlay,
-    không mirror frame đầu vào PnP.
+    Euler camera-frame theo thứ tự R = Rz(roll) @ Ry(yaw) @ Rx(pitch): yaw quanh
+    Y, pitch quanh X, roll quanh Z. PnP points đã đổi basis MediaPipe sang
+    OpenCV camera frame. `estimate_head_pose` đổi dấu yaw camera sang quy ước
+    semantic: yaw dương quay mũi về phía trái chủ thể (phía phải ảnh không mirror).
+    Chỉ mirror overlay, không mirror frame đầu vào PnP.
     """
     r = np.asarray(rotation, dtype=np.float64)
     if r.shape != (3, 3) or not np.isfinite(r).all():
@@ -193,7 +195,10 @@ def estimate_head_pose(
         if error > max_reprojection_error_px:
             return HeadPose(None, None, None, error, False, "high_reprojection_error")
         rotation, _ = cv2.Rodrigues(rotation_vector)
-        yaw, pitch, roll = rotation_matrix_to_euler(rotation)
+        camera_yaw, pitch, roll = rotation_matrix_to_euler(rotation)
+        # Basis conversion rotates the canonical frame 180° about X, which reverses
+        # the camera-frame yaw sign; return semantic subject-left as positive.
+        yaw = -camera_yaw
     except (cv2.error, ValueError, FloatingPointError) as exc:
         return HeadPose(None, None, None, None, False, f"solvepnp_error:{type(exc).__name__}")
     values = (yaw, pitch, roll)

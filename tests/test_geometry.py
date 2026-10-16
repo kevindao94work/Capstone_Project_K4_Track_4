@@ -4,6 +4,7 @@ import pytest
 
 from vinfast_dms.geometry import (
     LEFT_EYE_INDICES,
+    POSE_CANONICAL_MODEL_POINTS,
     POSE_LANDMARK_INDICES,
     POSE_MODEL_POINTS,
     RIGHT_EYE_INDICES,
@@ -44,8 +45,13 @@ def _project_face(yaw_deg: float = 0, pitch_deg: float = 0, roll_deg: float = 0)
     rx = np.asarray(
         [[1, 0, 0], [0, np.cos(pitch), -np.sin(pitch)], [0, np.sin(pitch), np.cos(pitch)]]
     )
+    camera_yaw = -yaw
     ry = np.asarray(
-        [[np.cos(yaw), 0, np.sin(yaw)], [0, 1, 0], [-np.sin(yaw), 0, np.cos(yaw)]]
+        [
+            [np.cos(camera_yaw), 0, np.sin(camera_yaw)],
+            [0, 1, 0],
+            [-np.sin(camera_yaw), 0, np.cos(camera_yaw)],
+        ]
     )
     rz = np.asarray(
         [[np.cos(roll), -np.sin(roll), 0], [np.sin(roll), np.cos(roll), 0], [0, 0, 1]]
@@ -131,12 +137,13 @@ def test_pose_zero_rotation_has_small_reprojection_residual() -> None:
     assert result.reprojection_error_px is not None
     assert result.reprojection_error_px < 1e-3
     assert result.yaw_deg == pytest.approx(0.0, abs=1e-4)
+    assert result.pitch_deg == pytest.approx(0.0, abs=1e-4)
 
 
 def test_pose_correspondence_matches_mediapipe_canonical_face_points() -> None:
     assert POSE_LANDMARK_INDICES == (1, 152, 33, 263, 61, 291)
     np.testing.assert_allclose(
-        POSE_MODEL_POINTS,
+        POSE_CANONICAL_MODEL_POINTS,
         [
             (0.0, -1.126865, 7.475604),
             (0.0, -9.403378, 4.264492),
@@ -146,6 +153,11 @@ def test_pose_correspondence_matches_mediapipe_canonical_face_points() -> None:
             (2.456206, -4.342621, 4.283884),
         ],
         atol=1e-6,
+    )
+    np.testing.assert_allclose(
+        POSE_MODEL_POINTS,
+        POSE_CANONICAL_MODEL_POINTS * [1.0, -1.0, -1.0],
+        atol=1e-12,
     )
 
 
