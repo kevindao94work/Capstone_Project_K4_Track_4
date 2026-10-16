@@ -36,16 +36,55 @@ GUIDED_PHASES = (
     (56.0, 60.0, "recovery", "LOOK STRAIGHT / EYES OPEN", "NORMAL"),
 )
 INTERACTIVE_SCENARIOS = (
-    ("normal", "LOOK STRAIGHT / EYES OPEN", 6.0, "NORMAL", False),
-    ("blink", "BLINK ONCE NATURALLY", 6.0, "NORMAL", False),
-    ("eyes_closed", "CLOSE EYES FOR 2 SECONDS, THEN OPEN", 7.0, "EYES_CLOSED", False),
-    ("turn_left", "TURN HEAD LEFT, HOLD 2S, RETURN", 7.0, "DISTRACTED", False),
-    ("turn_right", "TURN HEAD RIGHT, HOLD 2S, RETURN", 7.0, "DISTRACTED", False),
-    ("out_of_view", "MOVE OUT OF FRAME 2S, THEN RETURN", 6.0, "UNKNOWN", False),
-    ("cover_eyes", "COVER EYES 2S, THEN UNCOVER", 6.0, "UNKNOWN", False),
-    ("poor_light", "OPTIONAL: DIM ROOM LIGHT BRIEFLY", 6.0, "UNKNOWN", True),
-    ("recovery", "LOOK STRAIGHT / EYES OPEN", 5.0, "NORMAL", False),
+    ("normal", "Nhìn thẳng, mở mắt", 6.0, "NORMAL", False),
+    ("blink", "Chớp mắt tự nhiên một lần", 6.0, "NORMAL", False),
+    ("eyes_closed", "Nhắm mắt 2 giây rồi mở mắt", 7.0, "EYES_CLOSED", False),
+    ("turn_left", "Quay trái, giữ 2 giây rồi quay về", 7.0, "DISTRACTED", False),
+    ("turn_right", "Quay phải, giữ 2 giây rồi quay về", 7.0, "DISTRACTED", False),
+    ("out_of_view", "Ra khỏi khung 2 giây rồi quay lại", 6.0, "UNKNOWN", False),
+    ("cover_eyes", "Che mắt 2 giây rồi bỏ che", 6.0, "UNKNOWN", False),
+    ("poor_light", "TÙY CHỌN: giảm sáng nhẹ trong chốc lát", 6.0, "UNKNOWN", True),
+    ("recovery", "Nhìn thẳng, mở mắt", 5.0, "NORMAL", False),
 )
+SCENARIO_STAGES: dict[str, tuple[tuple[float, float, str, str, str], ...]] = {
+    "normal": ((0.0, 6.0, "steady_state", "Nhìn thẳng, mở mắt", "NORMAL"),),
+    "blink": (
+        (0.0, 2.0, "baseline", "Nhìn thẳng, mở mắt", "NORMAL"),
+        (2.0, 2.5, "transition", "Chớp mắt một lần", "NORMAL"),
+        (2.5, 6.0, "recovery", "Nhìn thẳng, mở mắt", "NORMAL"),
+    ),
+    "eyes_closed": (
+        (0.0, 1.0, "transition", "Nhắm mắt", "NORMAL"),
+        (1.0, 3.0, "hold", "Giữ mắt nhắm", "EYES_CLOSED"),
+        (3.0, 7.0, "recovery", "Mở mắt, nhìn thẳng", "NORMAL"),
+    ),
+    "turn_left": (
+        (0.0, 1.0, "transition", "Quay đầu sang trái", "NORMAL"),
+        (1.0, 3.0, "hold", "Giữ đầu quay trái", "DISTRACTED"),
+        (3.0, 7.0, "recovery", "Quay lại nhìn thẳng", "NORMAL"),
+    ),
+    "turn_right": (
+        (0.0, 1.0, "transition", "Quay đầu sang phải", "NORMAL"),
+        (1.0, 3.0, "hold", "Giữ đầu quay phải", "DISTRACTED"),
+        (3.0, 7.0, "recovery", "Quay lại nhìn thẳng", "NORMAL"),
+    ),
+    "out_of_view": (
+        (0.0, 1.0, "transition", "Di chuyển ra khỏi khung hình", "UNKNOWN"),
+        (1.0, 3.0, "hold", "Ở ngoài khung hình", "UNKNOWN"),
+        (3.0, 6.0, "recovery", "Quay lại nhìn thẳng", "NORMAL"),
+    ),
+    "cover_eyes": (
+        (0.0, 1.0, "transition", "Che mắt", "UNKNOWN"),
+        (1.0, 3.0, "hold", "Giữ che mắt", "UNKNOWN"),
+        (3.0, 6.0, "recovery", "Bỏ che, nhìn thẳng", "NORMAL"),
+    ),
+    "poor_light": (
+        (0.0, 1.0, "transition", "Giảm sáng nhẹ", "UNKNOWN"),
+        (1.0, 4.0, "hold", "Giữ ánh sáng yếu", "UNKNOWN"),
+        (4.0, 6.0, "recovery", "Khôi phục ánh sáng", "NORMAL"),
+    ),
+    "recovery": ((0.0, 5.0, "steady_state", "Nhìn thẳng, mở mắt", "NORMAL"),),
+}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -96,7 +135,7 @@ def _percentile(values: list[float], percentile: float) -> float | None:
     return float(np.percentile(values, percentile))
 
 
-def _new_scenario_stats() -> dict[str, object]:
+def _new_measurement_stats() -> dict[str, object]:
     return {
         "frames": 0,
         "face_detected_frames": 0,
@@ -106,28 +145,108 @@ def _new_scenario_stats() -> dict[str, object]:
         "observed_states": Counter(),
         "quality_reasons": Counter(),
         "processing_ms": [],
+        "reprojection_error_px": [],
+        "valid_yaw_deg": [],
+        "valid_pitch_deg": [],
+        "valid_roll_deg": [],
+        "first_frame_index": None,
+        "last_frame_index": None,
+        "source_start_s": None,
+        "source_end_s": None,
     }
 
 
-def _scenario_summary(
-    scenario: tuple[str, str, float, str, bool],
+def _new_scenario_stats() -> dict[str, object]:
+    stats = _new_measurement_stats()
+    stats["subphases"] = {}
+    return stats
+
+
+def _record_measurement(
     stats: dict[str, object],
-    status: str,
-    duration_s: float,
-) -> dict[str, object]:
+    sample,
+    result,
+    stage_name: str | None = None,
+    phase_elapsed_s: float | None = None,
+) -> None:
+    stats["frames"] = int(stats["frames"]) + 1
+    stats["face_detected_frames"] = int(stats["face_detected_frames"]) + int(
+        result.face_detected
+    )
+    stats["landmark_quality_gate_passed_frames"] = int(
+        stats["landmark_quality_gate_passed_frames"]
+    ) + int(result.face_landmarks is not None)
+    stats["pipeline_valid_frames"] = int(stats["pipeline_valid_frames"]) + int(
+        result.quality_valid
+    )
+    stats["warning_frames"] = int(stats["warning_frames"]) + int(
+        result.snapshot.warning
+    )
+    states = stats["observed_states"]
+    reasons = stats["quality_reasons"]
+    latencies = stats["processing_ms"]
+    errors = stats["reprojection_error_px"]
+    yaws = stats["valid_yaw_deg"]
+    pitches = stats["valid_pitch_deg"]
+    rolls = stats["valid_roll_deg"]
+    assert isinstance(states, Counter)
+    assert isinstance(reasons, Counter)
+    assert isinstance(latencies, list)
+    assert isinstance(errors, list)
+    assert isinstance(yaws, list)
+    assert isinstance(pitches, list)
+    assert isinstance(rolls, list)
+    states[result.state.value] += 1
+    reasons[result.quality_reason or "valid"] += 1
+    latencies.append(result.processing_ms)
+    if result.head_pose is not None:
+        error = result.head_pose.reprojection_error_px
+        if error is not None:
+            errors.append(error)
+        if result.head_pose.valid:
+            assert result.head_pose.yaw_deg is not None
+            assert result.head_pose.pitch_deg is not None
+            assert result.head_pose.roll_deg is not None
+            yaws.append(result.head_pose.yaw_deg)
+            pitches.append(result.head_pose.pitch_deg)
+            rolls.append(result.head_pose.roll_deg)
+    if stats["first_frame_index"] is None:
+        stats["first_frame_index"] = sample.index
+        stats["source_start_s"] = sample.timestamp_s
+    stats["last_frame_index"] = sample.index
+    stats["source_end_s"] = sample.timestamp_s
+
+    if stage_name is not None:
+        subphases = stats["subphases"]
+        assert isinstance(subphases, dict)
+        subphase = subphases.setdefault(stage_name, _new_measurement_stats())
+        assert isinstance(subphase, dict)
+        _record_measurement(subphase, sample, result)
+        offsets = subphase.setdefault("observed_phase_offsets_s", [])
+        assert isinstance(offsets, list)
+        if phase_elapsed_s is not None:
+            offsets.append(phase_elapsed_s)
+
+
+def _measurement_summary(stats: dict[str, object]) -> dict[str, object]:
     frames = int(stats["frames"])
     observed_states = stats["observed_states"]
     quality_reasons = stats["quality_reasons"]
     processing_ms = stats["processing_ms"]
+    errors = stats["reprojection_error_px"]
+    yaws = stats["valid_yaw_deg"]
+    pitches = stats["valid_pitch_deg"]
+    rolls = stats["valid_roll_deg"]
     assert isinstance(observed_states, Counter)
     assert isinstance(quality_reasons, Counter)
     assert isinstance(processing_ms, list)
+    assert isinstance(errors, list)
+    assert isinstance(yaws, list)
+    assert isinstance(pitches, list)
+    assert isinstance(rolls, list)
+    offsets = stats.get("observed_phase_offsets_s", [])
+    assert isinstance(offsets, list)
     return {
-        "scenario": scenario[0],
-        "requested_action": scenario[1],
-        "expected_state_hypothesis": scenario[3],
-        "status": status,
-        "measured_duration_seconds": duration_s,
         "frames": frames,
         "face_detected_frames": int(stats["face_detected_frames"]),
         "face_detection_rate": (
@@ -145,6 +264,64 @@ def _scenario_summary(
         "quality_reasons": dict(sorted(quality_reasons.items())),
         "processing_latency_ms_p50": _percentile(processing_ms, 50),
         "processing_latency_ms_p95": _percentile(processing_ms, 95),
+        "reprojection_error_px": {
+            "valid_measurements": len(errors),
+            "median": _percentile(errors, 50),
+            "p95": _percentile(errors, 95),
+            "maximum": max(errors) if errors else None,
+            "note": "Bao gồm residual trước quality gate; bỏ qua frame không tạo được pose.",
+        },
+        "valid_pose_orientation_deg": {
+            "measurements": len(yaws),
+            "yaw_median": _percentile(yaws, 50),
+            "yaw_p05": _percentile(yaws, 5),
+            "yaw_p95": _percentile(yaws, 95),
+            "pitch_median": _percentile(pitches, 50),
+            "roll_median": _percentile(rolls, 50),
+        },
+        "frame_boundaries": {
+            "first_frame_index": stats["first_frame_index"],
+            "last_frame_index": stats["last_frame_index"],
+            "source_start_s": stats["source_start_s"],
+            "source_end_s": stats["source_end_s"],
+        },
+        "observed_phase_offset_seconds": (
+            [min(offsets), max(offsets)] if offsets else None
+        ),
+    }
+
+
+def _scenario_summary(
+    scenario: tuple[str, str, float, str, bool],
+    stats: dict[str, object],
+    status: str,
+    duration_s: float,
+) -> dict[str, object]:
+    subphases = stats["subphases"]
+    assert isinstance(subphases, dict)
+    stage_summaries: dict[str, object] = {}
+    for stage in SCENARIO_STAGES[scenario[0]]:
+        start_s, end_s, name, instruction, expected = stage
+        stage_stats = subphases.get(name, _new_measurement_stats())
+        assert isinstance(stage_stats, dict)
+        stage_summaries[name] = {
+            "requested_action": instruction,
+            "expected_state_hypothesis": expected,
+            "planned_offset_seconds": [start_s, end_s],
+            **_measurement_summary(stage_stats),
+        }
+    return {
+        "scenario": scenario[0],
+        "requested_action": scenario[1],
+        "expected_state_hypothesis": scenario[3],
+        "status": status,
+        "measured_duration_seconds": duration_s,
+        **_measurement_summary(stats),
+        "subphases": stage_summaries,
+        "evaluation_note": (
+            "Ranh giới subphase theo cue/time tính từ Space; đây là giả thuyết "
+            "thao tác, không phải nhãn độc lập."
+        ),
     }
 
 
@@ -199,39 +376,43 @@ def run_interactive_scenario_check(args: argparse.Namespace) -> dict[str, object
                 and perf_counter() - session_start < 600.0
             ):
                 sample = next(source)
+                frame_read_at = perf_counter()
                 result = pipeline.process(sample)
                 scenario = scenarios[scenario_index]
                 phase_elapsed = (
-                    perf_counter() - active_started if active_started is not None else 0.0
+                    frame_read_at - active_started if active_started is not None else 0.0
                 )
                 if active_started is not None:
                     assert active_stats is not None
-                    active_stats["frames"] = int(active_stats["frames"]) + 1
-                    active_stats["face_detected_frames"] = int(
-                        active_stats["face_detected_frames"]
-                    ) + int(result.face_detected)
-                    active_stats["landmark_quality_gate_passed_frames"] = int(
-                        active_stats["landmark_quality_gate_passed_frames"]
-                    ) + int(result.face_landmarks is not None)
-                    active_stats["pipeline_valid_frames"] = int(
-                        active_stats["pipeline_valid_frames"]
-                    ) + int(result.quality_valid)
-                    active_stats["warning_frames"] = int(
-                        active_stats["warning_frames"]
-                    ) + int(result.snapshot.warning)
-                    active_states = active_stats["observed_states"]
-                    active_reasons = active_stats["quality_reasons"]
-                    active_latencies = active_stats["processing_ms"]
-                    assert isinstance(active_states, Counter)
-                    assert isinstance(active_reasons, Counter)
-                    assert isinstance(active_latencies, list)
-                    active_states[result.state.value] += 1
-                    active_reasons[result.quality_reason or "valid"] += 1
-                    active_latencies.append(result.processing_ms)
-                    prompt = f"DO NOW: {scenario[1]}  {max(0.0, scenario[2] - phase_elapsed):.1f}s"
+                    stage = next(
+                        (
+                            item
+                            for item in SCENARIO_STAGES[scenario[0]]
+                            if item[0] <= phase_elapsed < item[1]
+                        ),
+                        None,
+                    )
+                    if stage is not None:
+                        _start_s, end_s, stage_name, instruction, _expected = stage
+                        _record_measurement(
+                            active_stats,
+                            sample,
+                            result,
+                            stage_name,
+                            phase_elapsed,
+                        )
+                        prompt = (
+                            f"PHA {stage_name}: {instruction} · "
+                            f"{max(0.0, end_s - phase_elapsed):.1f}s"
+                        )
+                    else:
+                        prompt = (
+                            "Kết thúc pha · "
+                            f"{max(0.0, scenario[2] - phase_elapsed):.1f}s"
+                        )
                 else:
-                    optional_hint = " · S TO SKIP" if scenario[4] else ""
-                    prompt = f"READY: {scenario[1]} · SPACE TO START{optional_hint}"
+                    optional_hint = " · nhấn S để bỏ qua" if scenario[4] else ""
+                    prompt = f"SẴN SÀNG: {scenario[1]} · NHẤN SPACE{optional_hint}"
 
                 try:
                     display = draw_overlay(

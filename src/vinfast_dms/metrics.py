@@ -193,7 +193,7 @@ def evaluate_predictions(
         matrix[actual][predicted] += 1
 
     class_metrics: dict[str, dict[str, float | int | None]] = {}
-    for label in (DMSState.EYES_CLOSED.value, DMSState.DISTRACTED.value):
+    for label in KNOWN_LABELS:
         tp = matrix[label][label]
         actual_positive = sum(matrix[label].values())
         predicted_positive = sum(matrix[actual][label] for actual in KNOWN_LABELS)
@@ -219,6 +219,9 @@ def evaluate_predictions(
         if known_count
         else None
     )
+    covered_rows = [
+        item for item in known_rows if item[2] != DMSState.UNKNOWN.value
+    ]
     source_times = [item[0] for item in aligned]
     frame_intervals = [
         later - earlier
@@ -239,12 +242,17 @@ def evaluate_predictions(
     else:
         normal_duration = 0.0
     false_alarm_events = 0
-    previous_alert = False
-    for _timestamp, actual, predicted, _row in aligned:
-        alert = predicted in ALERT_LABELS
-        if actual == DMSState.NORMAL.value and alert and not previous_alert:
-            false_alarm_events += 1
-        previous_alert = alert
+    for segment in labels:
+        if segment.label != DMSState.NORMAL.value:
+            continue
+        previous_alert = False
+        for timestamp, _actual, predicted, _row in aligned:
+            if not segment.start_s <= timestamp < segment.end_s:
+                continue
+            alert = predicted in ALERT_LABELS
+            if alert and not previous_alert:
+                false_alarm_events += 1
+            previous_alert = alert
     false_alarm_rate = (
         false_alarm_events / (normal_duration / 60.0) if normal_duration > 0.0 else None
     )
@@ -307,8 +315,18 @@ def evaluate_predictions(
         "labeled_frames": len(aligned),
         "known_ground_truth_frames": known_count,
         "known_frame_accuracy": known_correct / known_count if known_count else None,
+        "accuracy_when_covered": (
+            known_correct / len(covered_rows) if covered_rows else None
+        ),
         "unknown_ground_truth_frames": unknown_actual,
         "unknown_prediction_frames": unknown_predicted,
+        "abstention_frames_on_known_ground_truth": known_count - len(covered_rows),
+        "abstention_rate_on_known_ground_truth": (
+            1.0 - coverage if coverage is not None else None
+        ),
+        "abstention_rate_on_all_labeled_frames": (
+            unknown_predicted / len(aligned) if aligned else None
+        ),
         "coverage": coverage,
         "confusion_matrix": matrix,
         "per_class": class_metrics,

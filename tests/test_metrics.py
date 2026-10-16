@@ -57,6 +57,10 @@ def test_confusion_matrix_and_class_metrics_match_exact_fixture() -> None:
     }
     assert result["known_frame_accuracy"] == pytest.approx(4 / 6)
     assert result["coverage"] == pytest.approx(5 / 6)
+    assert result["accuracy_when_covered"] == pytest.approx(4 / 5)
+    assert result["abstention_frames_on_known_ground_truth"] == 1
+    assert result["abstention_rate_on_known_ground_truth"] == pytest.approx(1 / 6)
+    assert result["abstention_rate_on_all_labeled_frames"] == pytest.approx(2 / 7)
     assert result["unknown_ground_truth_frames"] == 1
     assert result["unknown_prediction_frames"] == 2
     assert result["per_class"]["EYES_CLOSED"]["precision"] == 1.0
@@ -88,6 +92,7 @@ def test_no_positive_events_and_no_normal_duration_return_na() -> None:
     assert result["false_alarms_per_normal_minute"] is None
     assert result["per_class"]["EYES_CLOSED"]["precision"] is None
     assert result["per_class"]["EYES_CLOSED"]["f1"] is None
+    assert result["accuracy_when_covered"] is None
     assert result["fps_runtime"] is None
 
 
@@ -140,4 +145,29 @@ def test_instant_baseline_uses_same_thresholds_and_unknown_guard() -> None:
         "UNKNOWN",
         "DISTRACTED",
     ]
+
+
+def test_false_alarm_events_reset_at_each_normal_segment() -> None:
+    labels = [
+        EventSegment(0.0, 2.0, "NORMAL", "Đào Gia Bảo"),
+        EventSegment(2.0, 3.0, "DISTRACTED", "Đào Gia Bảo"),
+        EventSegment(3.0, 5.0, "NORMAL", "Đào Gia Bảo"),
+    ]
+    predictions = [
+        {
+            "source_time_s": str(t),
+            "state": state,
+            "quality_valid": "True",
+            "processing_ms": "1",
+        }
+        for t, state in [
+            (0.5, "DISTRACTED"),
+            (1.5, "NORMAL"),
+            (2.5, "DISTRACTED"),
+            (3.5, "DISTRACTED"),
+            (4.5, "NORMAL"),
+        ]
+    ]
+    result = evaluate_predictions(predictions, labels)
+    assert result["false_alarm_events_on_normal"] == 2
 

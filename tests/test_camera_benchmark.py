@@ -1,9 +1,14 @@
+from types import SimpleNamespace
+
 import pytest
 import scripts.benchmark_camera as benchmark_camera
 from scripts.benchmark_camera import (
     GUIDED_PHASES,
     INTERACTIVE_SCENARIOS,
+    _measurement_summary,
+    _new_scenario_stats,
     _percentile,
+    _record_measurement,
     build_parser,
     run_interactive_scenario_check,
 )
@@ -99,3 +104,37 @@ def test_guided_scenarios_cover_one_minute_and_required_cases() -> None:
         "poor_light",
         "recovery",
     }
+
+
+@pytest.mark.parametrize("scenario", INTERACTIVE_SCENARIOS)
+def test_interactive_stage_boundaries_cover_scenario_without_gaps(scenario) -> None:
+    stages = benchmark_camera.SCENARIO_STAGES[scenario[0]]
+    assert stages[0][0] == 0.0
+    assert stages[-1][1] == scenario[2]
+    assert all(
+        left[1] == right[0]
+        for left, right in zip(stages, stages[1:], strict=False)
+    )
+
+
+def test_scenario_stats_record_stage_boundaries_and_quality_counts() -> None:
+    stats = _new_scenario_stats()
+    result = SimpleNamespace(
+        face_detected=True,
+        face_landmarks=object(),
+        quality_valid=True,
+        snapshot=SimpleNamespace(warning=False),
+        state=SimpleNamespace(value="NORMAL"),
+        quality_reason=None,
+        processing_ms=4.0,
+        head_pose=None,
+    )
+    sample = SimpleNamespace(index=10, timestamp_s=1.25)
+    _record_measurement(stats, sample, result, "steady_state", 0.5)
+    summary = _measurement_summary(stats)
+    phase_summary = stats["subphases"]["steady_state"]
+    assert summary["frames"] == 1
+    assert summary["face_detected_frames"] == 1
+    assert phase_summary["first_frame_index"] == 10
+    assert phase_summary["last_frame_index"] == 10
+    assert phase_summary["observed_phase_offsets_s"] == [0.5]
