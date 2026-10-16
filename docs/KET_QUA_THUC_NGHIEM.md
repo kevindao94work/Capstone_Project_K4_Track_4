@@ -13,6 +13,7 @@ vào bảng. Không lấy fixture tổng hợp làm metric thực nghiệm.
 |---|---|---|
 | Số clip và số người có consent | N/A | Chưa ghi nhận clip. |
 | Số frame/nhãn độc lập | N/A | Chưa có ground truth. |
+| Webcam trên MacBook Pro M4 | BLOCKED-QUYỀN | DMS thử mở nhưng macOS báo Terminal/Python chưa được cấp quyền; 0 frame webcam được xử lý. |
 | Confusion matrix, precision/recall/F1 | N/A | Không có cặp dự đoán–nhãn. |
 | Coverage, UNKNOWN, false alarms/phút NORMAL | N/A | Chưa chạy benchmark có nhãn. |
 | Source event onset delay | N/A | Chưa có sự kiện được gắn nhãn. |

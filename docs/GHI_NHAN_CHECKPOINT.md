@@ -270,10 +270,10 @@ từ unit test.
 
 ### CP10 — Kiểm thử cuối và phát hành repo
 
-- Thời điểm UTC: 2026-10-16 12:24 UTC.
+- Thời điểm UTC: 2026-10-16 12:27 UTC.
 - Trạng thái: PASS cho cài đặt sạch, tests/lint/compile, model reproducibility,
-  video smoke, privacy scan, GitHub public visibility và đồng bộ sẽ được xác minh
-  sau commit; BLOCKED-QUYỀN cho webcam vì macOS báo camera chưa được cấp quyền.
+  video smoke, privacy scan, GitHub public visibility và đồng bộ; BLOCKED-QUYỀN
+  cho webcam vì macOS báo camera chưa được cấp quyền.
 - Đã thay đổi: `scripts/validate_submission.py`, kiểm thử help/validator trong
   `tests/test_benchmark.py`, checklist, kết quả cuối và kịch bản demo. Venv sạch
   được tạo ngoài repo bằng Python 3.11; `pip install -e '.[dev]'` thành công.
@@ -282,8 +282,12 @@ từ unit test.
   được tải lại từ Google Storage với SHA-256 khớp
   `64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff`. Video
   fixture trống 30 frame được DMS xử lý, tạo 30 dòng CSV và trạng thái cuối
-  `KHÔNG XÁC ĐỊNH`; replay 2 lượt/30 frame tái lập. Validator pre-commit → mọi
-  kiểm tra PASS. Public repository `origin` mở được ở GitHub.
+  `KHÔNG XÁC ĐỊNH`; replay 2 lượt/30 frame tái lập. Một lần gọi smoke harness đầu
+  thiếu biến môi trường cho đường dẫn fixture; đã chạy lại với path tường minh và
+  smoke thành công. Validator pre-commit → mọi kiểm tra PASS. Sau commit,
+  `scripts/validate_submission.py` → mọi mục PASS, rà 56 tracked files, worktree
+  sạch và `main` local = `origin/main` tại SHA dưới đây. Public repository `origin`
+  mở được ở GitHub.
 - Camera: đã thử chạy DMS live headless; macOS/OpenCV trả “not authorized to
   capture video”, source báo không mở được webcam, exit 2 sau khoảng 1.8 giây.
   Không xử lý frame webcam và không lưu ảnh, video hay CSV. Phải bật quyền cho
@@ -294,7 +298,8 @@ từ unit test.
   Git tracked, secret, media, model và đường dẫn ignore; xác nhận repo public.
 - Phần chưa kiểm chứng: webcam demo, video fallback người thật, metric thật, FPS
   mục tiêu 12, ca lỗi thật và VLearn. Vì thiếu dữ liệu, không tạo tag `v1.0.0`.
-- Commit/push: SHA CP10 chính và `origin/main` sẽ được ghi sau khi commit/push và
-  fetch xác nhận; không force-push, giữ `origin` ban đầu.
+- Commit/push: `fa4cf632f2ba68b6d2f69c152fd1dff47d39f2c7`, commit
+  `chore: hoan thien capstone va kiem dinh cuoi`; đã push `main`, fetch xác nhận
+  `HEAD` = `origin/main` = SHA này. `origin` giữ nguyên; không force-push.
 - Minh chứng: `scripts/validate_submission.py`, `docs/CHECKLIST_NOP_BAI.md`,
   `docs/KET_QUA_THUC_NGHIEM.md`; fixture và venv sạch đều ở thư mục tạm.

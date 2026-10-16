@@ -37,8 +37,9 @@ python -m vinfast_dms --source data/private/consented_demo.mp4 --headless
 
 Thêm `--max-frames 100` để giới hạn lượt chạy. Script kiểm tra camera chỉ chạy
 khi tác giả chủ động gọi `python scripts/check_camera.py`; quyền webcam do macOS
-quản lý, cấp trong **System Settings → Privacy & Security → Camera**. Kết quả hiện
-tại mới được kiểm chứng bằng fixture video tổng hợp; chưa có kết quả trên người.
+quản lý, cấp trong **System Settings → Privacy & Security → Camera**. CP10 đã thử
+mở DMS live nhưng macOS báo chưa cấp quyền Camera cho Terminal/Python; không đọc
+được frame webcam. Kết quả trên người vẫn chưa được kiểm chứng.
 Video và ảnh không được ghi mặc định. Log CSV chỉ tạo khi bật `--log-csv`; bỏ
 đường dẫn để lưu tên tự sinh trong `outputs/private/`, hoặc chỉ định đường dẫn.
 Ghi video overlay chỉ khi chủ động bật `--record-output`; mặc định cũng nằm trong

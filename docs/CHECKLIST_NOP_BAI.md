@@ -7,7 +7,7 @@ Các mục `CHƯA KIỂM CHỨNG` cần được giữ nguyên trạng thái khi
 | # | Hạng mục | Trạng thái | Bằng chứng / thao tác cần làm |
 |---:|---|---|---|
 | 1 | Cài đặt, test, lint, compile và secret/privacy scan | PASS CP10 | Cài mới Python 3.11, 92 test pass; validator quét file tracked, placeholder và ignore. |
-| 2 | Repository public, origin đúng và commit remote khớp | PASS sau push CP10 | [Repository public](https://github.com/kevindao94work/Capstone_Project_K4_Track_4); SHA sẽ được xác nhận trong biên bản CP10. |
+| 2 | Repository public, origin đúng và commit remote khớp | PASS CP10 | [Repository public](https://github.com/kevindao94work/Capstone_Project_K4_Track_4); `main` local = remote tại `fa4cf632f2ba68b6d2f69c152fd1dff47d39f2c7`. |
 | 3 | Tên, MSSV và tác giả duy nhất thống nhất | PASS theo tài liệu hiện có | README và báo cáo ghi Đào Gia Bảo / 2A202602793; không teammate giả. |
 | 4 | Webcam trên máy demo đã chạy thật | BLOCKED-QUYỀN | Đã thử DMS; macOS báo chưa cấp Camera cho Terminal/Python. Bật quyền tại Privacy & Security → Camera rồi thử lại. |
 | 5 | Video fallback người thật có consent và được phép công bố | CHƯA CÓ | Chưa có clip; không dùng fixture tổng hợp làm video demo người thật. |
